@@ -13,4 +13,5 @@ Current known issues:
 
 This mod has not been playtested yet. 
 Please let me know ANY bugs and how to recreate it (preferably with screenshots)
+Also If it's missing any hexes lmk too!
 You can reach out to me on my discord -allyme
