@@ -1,7 +1,0 @@
-{
-  "name": "SeymourAnalyzer",
-  "creator": "AllyMe",
-  "description": "Analyzes Seymour armor colors and shows Delta E matches with a bunch of extra features",
-  "version": "0.1.0",
-  "entry": "index.js"
-}
