@@ -1,0 +1,1370 @@
+{
+    "575e5719-30e2-4d4f-acdf-5fa3fbb4cdaa": {
+        "pieceName": "Satin Trousers",
+        "uuid": "575e5719-30e2-4d4f-acdf-5fa3fbb4cdaa",
+        "hexcode": "678134",
+        "bestMatch": {
+            "colorName": "Exo pure dark green",
+            "targetHex": "667F33",
+            "deltaE": 0.9253545676150134,
+            "absoluteDistance": 4,
+            "tier": 0
+        },
+        "chestLocation": {
+            "x": -1,
+            "y": 204,
+            "z": -83
+        },
+        "timestamp": 1760803526129
+    },
+    "78e5304c-d6f4-4f06-8f0d-f41869aaa7fc": {
+        "pieceName": "Oxford Shoes",
+        "uuid": "78e5304c-d6f4-4f06-8f0d-f41869aaa7fc",
+        "hexcode": "75CC13",
+        "bestMatch": {
+            "colorName": "Exo pure green",
+            "targetHex": "7FCC19",
+            "deltaE": 3.597023180135297,
+            "absoluteDistance": 16,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -1,
+            "y": 204,
+            "z": -83
+        },
+        "timestamp": 1760803526129
+    },
+    "fd75d11e-1d82-49dd-b590-54728359761f": {
+        "pieceName": "Oxford Shoes",
+        "uuid": "fd75d11e-1d82-49dd-b590-54728359761f",
+        "hexcode": "9A04D4",
+        "bestMatch": {
+            "colorName": "Aurora - Stage 46",
+            "targetHex": "A11BDD",
+            "deltaE": 2.9641928410148624,
+            "absoluteDistance": 39,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -1,
+            "y": 204,
+            "z": -83
+        },
+        "timestamp": 1760803526130
+    },
+    "75dd877d-6926-4661-942b-98e3185f9f95": {
+        "pieceName": "Oxford Shoes",
+        "uuid": "75dd877d-6926-4661-942b-98e3185f9f95",
+        "hexcode": "D71EF3",
+        "bestMatch": {
+            "colorName": "Aurora - Stage 40",
+            "targetHex": "D41DF2",
+            "deltaE": 0.87955991950151,
+            "absoluteDistance": 5,
+            "tier": 0
+        },
+        "chestLocation": {
+            "x": -1,
+            "y": 204,
+            "z": -83
+        },
+        "timestamp": 1760803526130
+    },
+    "4959103c-46a7-42da-a501-9c3af6107662": {
+        "pieceName": "Cashmere Jacket",
+        "uuid": "4959103c-46a7-42da-a501-9c3af6107662",
+        "hexcode": "99DFF6",
+        "bestMatch": {
+            "colorName": "Frozen Blaze 3p",
+            "targetHex": "A0DAEF",
+            "deltaE": 3.519436531623054,
+            "absoluteDistance": 19,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -1,
+            "y": 204,
+            "z": -83
+        },
+        "timestamp": 1760803526145
+    },
+    "067a6615-319d-4818-8af5-88b369120217": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "067a6615-319d-4818-8af5-88b369120217",
+        "hexcode": "64615B",
+        "bestMatch": {
+            "colorName": "Goldor Leggings",
+            "targetHex": "65605A",
+            "deltaE": 0.898056057801124,
+            "absoluteDistance": 3,
+            "tier": 0
+        },
+        "chestLocation": {
+            "x": -1,
+            "y": 204,
+            "z": -83
+        },
+        "timestamp": 1760803526160
+    },
+    "765b746c-23c9-4da7-a38f-14cd4b03f1ec": {
+        "pieceName": "Satin Trousers",
+        "uuid": "765b746c-23c9-4da7-a38f-14cd4b03f1ec",
+        "hexcode": "0B5625",
+        "bestMatch": {
+            "colorName": "Squash Boots",
+            "targetHex": "13561E",
+            "deltaE": 3.9331455988072785,
+            "absoluteDistance": 15,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -1,
+            "y": 204,
+            "z": -83
+        },
+        "timestamp": 1760803526174
+    },
+    "3a769593-4d69-42f7-a9c2-013c6b8e42e9": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "3a769593-4d69-42f7-a9c2-013c6b8e42e9",
+        "hexcode": "DA3901",
+        "bestMatch": {
+            "colorName": "Rampart 3p",
+            "targetHex": "DF2E06",
+            "deltaE": 4.950420570685319,
+            "absoluteDistance": 21,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -1,
+            "y": 204,
+            "z": -83
+        },
+        "timestamp": 1760803526188
+    },
+    "6252e874-a3d7-47b5-8990-e25dc2c67d46": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "6252e874-a3d7-47b5-8990-e25dc2c67d46",
+        "hexcode": "0A7B35",
+        "bestMatch": {
+            "colorName": "Rotten Chestplate+Leggings / Backwater 3p",
+            "targetHex": "017D31",
+            "deltaE": 3.3941378698919964,
+            "absoluteDistance": 15,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -1,
+            "y": 204,
+            "z": -83
+        },
+        "timestamp": 1760803526202
+    },
+    "4969a15e-f569-4b59-8327-986ab2f31ad1": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "4969a15e-f569-4b59-8327-986ab2f31ad1",
+        "hexcode": "105556",
+        "bestMatch": {
+            "colorName": "Pearlescent Dye",
+            "targetHex": "115555",
+            "deltaE": 0.6469240949393958,
+            "absoluteDistance": 2,
+            "tier": 0
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529389
+    },
+    "7a6fb2fb-1b6f-429d-a319-be3dc7f05c7b": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "7a6fb2fb-1b6f-429d-a319-be3dc7f05c7b",
+        "hexcode": "FDBC05",
+        "bestMatch": {
+            "colorName": "Skeleton Soldier",
+            "targetHex": "FFBC0B",
+            "deltaE": 0.9858278776663899,
+            "absoluteDistance": 8,
+            "tier": 0
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529390
+    },
+    "52176225-f2ff-4351-8588-1119e937f1b9": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "52176225-f2ff-4351-8588-1119e937f1b9",
+        "hexcode": "12C005",
+        "bestMatch": {
+            "colorName": "Growth Armour",
+            "targetHex": "00BE00",
+            "deltaE": 0.8732582199853814,
+            "absoluteDistance": 25,
+            "tier": 0
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529390
+    },
+    "25764c45-93c4-4581-9656-cee160e97999": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "25764c45-93c4-4581-9656-cee160e97999",
+        "hexcode": "DFEB38",
+        "bestMatch": {
+            "colorName": "Skeleton Grunt",
+            "targetHex": "E1EB34",
+            "deltaE": 1.4714563717905058,
+            "absoluteDistance": 6,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529390
+    },
+    "ca5ff645-fc1b-477e-98f1-20df9ba342a3": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "ca5ff645-fc1b-477e-98f1-20df9ba342a3",
+        "hexcode": "E65A21",
+        "bestMatch": {
+            "colorName": "Flame Dye",
+            "targetHex": "E25822",
+            "deltaE": 1.8597909160686545,
+            "absoluteDistance": 7,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529390
+    },
+    "c3d2d511-bd05-4e93-94bb-24d70ed5fd80": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "c3d2d511-bd05-4e93-94bb-24d70ed5fd80",
+        "hexcode": "D17D00",
+        "bestMatch": {
+            "colorName": "Zombie Soldier",
+            "targetHex": "D07F00",
+            "deltaE": 1.5461407526085127,
+            "absoluteDistance": 3,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529390
+    },
+    "b84f3223-0565-4409-8827-bf37cd765358": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "b84f3223-0565-4409-8827-bf37cd765358",
+        "hexcode": "15FE0C",
+        "bestMatch": {
+            "colorName": "Pure Green",
+            "targetHex": "00FF00",
+            "deltaE": 1.5681082649486968,
+            "absoluteDistance": 34,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529391
+    },
+    "2e3a5981-a1e2-493b-ad33-75b192eff6fd": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "2e3a5981-a1e2-493b-ad33-75b192eff6fd",
+        "hexcode": "C03B0A",
+        "bestMatch": {
+            "colorName": "Salmon Helm+Boots",
+            "targetHex": "C13C0F",
+            "deltaE": 1.2096737874615349,
+            "absoluteDistance": 7,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529404
+    },
+    "2cad2dae-042f-430e-be07-61db731883d6": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "2cad2dae-042f-430e-be07-61db731883d6",
+        "hexcode": "0EBD0A",
+        "bestMatch": {
+            "colorName": "Growth Armour",
+            "targetHex": "00BE00",
+            "deltaE": 1.7699541327422685,
+            "absoluteDistance": 25,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529416
+    },
+    "34c6c42f-388a-4ce2-b718-6d7f62169f2f": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "34c6c42f-388a-4ce2-b718-6d7f62169f2f",
+        "hexcode": "08FE09",
+        "bestMatch": {
+            "colorName": "Pure Green",
+            "targetHex": "00FF00",
+            "deltaE": 1.1172806409230762,
+            "absoluteDistance": 18,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529430
+    },
+    "72592a99-f90a-409e-b22f-9612652be85a": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "72592a99-f90a-409e-b22f-9612652be85a",
+        "hexcode": "FDBA11",
+        "bestMatch": {
+            "colorName": "Skeleton Soldier",
+            "targetHex": "FFBC0B",
+            "deltaE": 1.4989938174157984,
+            "absoluteDistance": 10,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529444
+    },
+    "9f94d0dc-a078-412a-9f24-b4388dd89457": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "9f94d0dc-a078-412a-9f24-b4388dd89457",
+        "hexcode": "0C5859",
+        "bestMatch": {
+            "colorName": "Pearlescent Dye",
+            "targetHex": "115555",
+            "deltaE": 1.6365187044464047,
+            "absoluteDistance": 12,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529458
+    },
+    "8ec53dfd-9316-4287-b63f-21b1ce5f7e3f": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "8ec53dfd-9316-4287-b63f-21b1ce5f7e3f",
+        "hexcode": "FF6C12",
+        "bestMatch": {
+            "colorName": "Skeleton Master",
+            "targetHex": "FF6B0B",
+            "deltaE": 1.3221211313927161,
+            "absoluteDistance": 8,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529470
+    },
+    "37785daa-85fe-4aae-ac25-2ef5812a59b5": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "37785daa-85fe-4aae-ac25-2ef5812a59b5",
+        "hexcode": "EFAD37",
+        "bestMatch": {
+            "colorName": "Pumpkin Armour",
+            "targetHex": "EDAA36",
+            "deltaE": 1.3174831886429574,
+            "absoluteDistance": 6,
+            "tier": 1
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -69
+        },
+        "timestamp": 1760803529484
+    },
+    "163700e7-ec7d-4622-b9b5-8bb69308c0d7": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "163700e7-ec7d-4622-b9b5-8bb69308c0d7",
+        "hexcode": "08A16B",
+        "bestMatch": {
+            "colorName": "Fervor Boots",
+            "targetHex": "07A674",
+            "deltaE": 3.0766991655922324,
+            "absoluteDistance": 15,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803726977
+    },
+    "36fd5342-3e4f-480a-b471-908c5d5bac24": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "36fd5342-3e4f-480a-b471-908c5d5bac24",
+        "hexcode": "26A863",
+        "bestMatch": {
+            "colorName": "Jade Dye",
+            "targetHex": "00A86B",
+            "deltaE": 4.841858886597059,
+            "absoluteDistance": 46,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803726978
+    },
+    "576f8a84-1b39-4b09-ada5-f4a41b0a2e39": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "576f8a84-1b39-4b09-ada5-f4a41b0a2e39",
+        "hexcode": "316743",
+        "bestMatch": {
+            "colorName": "Holly Dye",
+            "targetHex": "3C6746",
+            "deltaE": 4.214922178035536,
+            "absoluteDistance": 14,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803726992
+    },
+    "db956f54-00c6-4486-ad11-49322e6621d3": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "db956f54-00c6-4486-ad11-49322e6621d3",
+        "hexcode": "8BCE15",
+        "bestMatch": {
+            "colorName": "Exo pure green",
+            "targetHex": "7FCC19",
+            "deltaE": 4.0529296517443,
+            "absoluteDistance": 18,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727007
+    },
+    "f4153062-2a56-4986-9ac9-a1cb442bce68": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "f4153062-2a56-4986-9ac9-a1cb442bce68",
+        "hexcode": "8CD213",
+        "bestMatch": {
+            "colorName": "Exo pure green",
+            "targetHex": "7FCC19",
+            "deltaE": 4.542259077019316,
+            "absoluteDistance": 25,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727021
+    },
+    "3f7d6541-2d8b-4d30-9493-ed6a3499bdb1": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "3f7d6541-2d8b-4d30-9493-ed6a3499bdb1",
+        "hexcode": "AEE5BA",
+        "bestMatch": {
+            "colorName": "Celadon Dye",
+            "targetHex": "ACE1AF",
+            "deltaE": 4.028873576997492,
+            "absoluteDistance": 17,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727035
+    },
+    "7a08b1ad-2959-44c8-a9bf-5f02f5b58d2a": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "7a08b1ad-2959-44c8-a9bf-5f02f5b58d2a",
+        "hexcode": "33AE71",
+        "bestMatch": {
+            "colorName": "Jade Dye",
+            "targetHex": "00A86B",
+            "deltaE": 4.499258783298798,
+            "absoluteDistance": 63,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727048
+    },
+    "026db43c-0e14-4ca4-8866-cbbe32cf3427": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "026db43c-0e14-4ca4-8866-cbbe32cf3427",
+        "hexcode": "4CD27F",
+        "bestMatch": {
+            "colorName": "Emerald Dye",
+            "targetHex": "50C878",
+            "deltaE": 4.662233144563871,
+            "absoluteDistance": 21,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727062
+    },
+    "6c33b7c4-a08d-4a21-a8c3-f9ae802c2f9a": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "6c33b7c4-a08d-4a21-a8c3-f9ae802c2f9a",
+        "hexcode": "A1D9AA",
+        "bestMatch": {
+            "colorName": "Celadon Dye",
+            "targetHex": "ACE1AF",
+            "deltaE": 3.4146231553937256,
+            "absoluteDistance": 24,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727076
+    },
+    "f2a4c10d-d375-4273-ac6e-4808b4449159": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "f2a4c10d-d375-4273-ac6e-4808b4449159",
+        "hexcode": "26C70C",
+        "bestMatch": {
+            "colorName": "Growth Armour",
+            "targetHex": "00BE00",
+            "deltaE": 3.5427177768098934,
+            "absoluteDistance": 59,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727090
+    },
+    "3efcddc8-39c4-452e-853b-925f156600c2": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "3efcddc8-39c4-452e-853b-925f156600c2",
+        "hexcode": "3FC46F",
+        "bestMatch": {
+            "colorName": "Emerald Dye",
+            "targetHex": "50C878",
+            "deltaE": 4.3947600293467,
+            "absoluteDistance": 30,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727102
+    },
+    "9d8403a8-b04c-4cd4-8225-75f80728fa8c": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "9d8403a8-b04c-4cd4-8225-75f80728fa8c",
+        "hexcode": "D5EA31",
+        "bestMatch": {
+            "colorName": "Skeleton Grunt",
+            "targetHex": "E1EB34",
+            "deltaE": 4.695411217870261,
+            "absoluteDistance": 16,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727116
+    },
+    "b10dc203-fcfd-45bf-8a12-65aff312267c": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "b10dc203-fcfd-45bf-8a12-65aff312267c",
+        "hexcode": "503B46",
+        "bestMatch": {
+            "colorName": "Pelt Dye",
+            "targetHex": "50414C",
+            "deltaE": 3.4382091050811403,
+            "absoluteDistance": 12,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727128
+    },
+    "708ae0be-a3bc-41d7-b96c-6c94bc2167f1": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "708ae0be-a3bc-41d7-b96c-6c94bc2167f1",
+        "hexcode": "F3ED35",
+        "bestMatch": {
+            "colorName": "Exo pure yellow",
+            "targetHex": "E5E533",
+            "deltaE": 4.645433006516161,
+            "absoluteDistance": 24,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727141
+    },
+    "d7e6fedc-33b7-4f04-96b4-aeccdf20160d": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "d7e6fedc-33b7-4f04-96b4-aeccdf20160d",
+        "hexcode": "C2AF9F",
+        "bestMatch": {
+            "colorName": "Livid Dye",
+            "targetHex": "CEB7AA",
+            "deltaE": 4.002750810693553,
+            "absoluteDistance": 31,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727154
+    },
+    "99b3b341-e1c9-4102-8b3f-66914e700f59": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "99b3b341-e1c9-4102-8b3f-66914e700f59",
+        "hexcode": "0B5C5F",
+        "bestMatch": {
+            "colorName": "Pearlescent Dye",
+            "targetHex": "115555",
+            "deltaE": 3.6521883046596852,
+            "absoluteDistance": 23,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727167
+    },
+    "1a35718d-62f2-4805-9a1f-b4496522e9ce": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "1a35718d-62f2-4805-9a1f-b4496522e9ce",
+        "hexcode": "9DFA2C",
+        "bestMatch": {
+            "colorName": "Bouncy Armour",
+            "targetHex": "ADFF2F",
+            "deltaE": 4.493609211608218,
+            "absoluteDistance": 24,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727180
+    },
+    "d320bc97-2d9c-441a-b1cc-b3c71bb41e49": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "d320bc97-2d9c-441a-b1cc-b3c71bb41e49",
+        "hexcode": "78A426",
+        "bestMatch": {
+            "colorName": "Fermento Leggings",
+            "targetHex": "6A9C1B",
+            "deltaE": 4.086320169159963,
+            "absoluteDistance": 33,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727192
+    },
+    "0f52c22c-9719-4b64-8650-d45671a39773": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "0f52c22c-9719-4b64-8650-d45671a39773",
+        "hexcode": "A47612",
+        "bestMatch": {
+            "colorName": "Rotten Helm+Boots",
+            "targetHex": "9E7003",
+            "deltaE": 2.6048241351812638,
+            "absoluteDistance": 27,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727206
+    },
+    "d5a07dc9-4c13-4c4c-9ab0-1057f2c60500": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "d5a07dc9-4c13-4c4c-9ab0-1057f2c60500",
+        "hexcode": "06F60A",
+        "bestMatch": {
+            "colorName": "Pure Green",
+            "targetHex": "00FF00",
+            "deltaE": 4.853459682401026,
+            "absoluteDistance": 25,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727219
+    },
+    "30589349-b801-44db-a64e-461d1f5ff6fd": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "30589349-b801-44db-a64e-461d1f5ff6fd",
+        "hexcode": "678530",
+        "bestMatch": {
+            "colorName": "Exo pure dark green",
+            "targetHex": "667F33",
+            "deltaE": 4.968217749450564,
+            "absoluteDistance": 10,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727232
+    },
+    "d278baf6-8014-42e1-873b-6afdcdf498d8": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "d278baf6-8014-42e1-873b-6afdcdf498d8",
+        "hexcode": "DAE7E8",
+        "bestMatch": {
+            "colorName": "Super Heavy Helm+Boots",
+            "targetHex": "E6E6E6",
+            "deltaE": 4.6093365174226255,
+            "absoluteDistance": 15,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727245
+    },
+    "082b7dc5-a4ed-44a8-8573-75870add8479": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "082b7dc5-a4ed-44a8-8573-75870add8479",
+        "hexcode": "08A161",
+        "bestMatch": {
+            "colorName": "Jade Dye",
+            "targetHex": "00A86B",
+            "deltaE": 3.37747897314891,
+            "absoluteDistance": 25,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727258
+    },
+    "556d393a-a613-4107-b457-56b7dc55155c": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "556d393a-a613-4107-b457-56b7dc55155c",
+        "hexcode": "BCE4B1",
+        "bestMatch": {
+            "colorName": "Celadon Dye",
+            "targetHex": "ACE1AF",
+            "deltaE": 4.904544887987437,
+            "absoluteDistance": 21,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727271
+    },
+    "d6c778d3-8f32-4541-b57a-c75e667f2b67": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "d6c778d3-8f32-4541-b57a-c75e667f2b67",
+        "hexcode": "684930",
+        "bestMatch": {
+            "colorName": "Exo pure brown",
+            "targetHex": "664C33",
+            "deltaE": 2.74915570368199,
+            "absoluteDistance": 8,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727311
+    },
+    "4b830566-9a58-4f86-99ab-2598eed0d86b": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "4b830566-9a58-4f86-99ab-2598eed0d86b",
+        "hexcode": "C6D6D8",
+        "bestMatch": {
+            "colorName": "Rabbit Armour",
+            "targetHex": "CBD2DB",
+            "deltaE": 4.98856984151591,
+            "absoluteDistance": 12,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727324
+    },
+    "e1dc416d-33d8-473b-a7ae-6737d67bc259": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "e1dc416d-33d8-473b-a7ae-6737d67bc259",
+        "hexcode": "03555A",
+        "bestMatch": {
+            "colorName": "Pearlescent Dye",
+            "targetHex": "115555",
+            "deltaE": 3.2602144438882332,
+            "absoluteDistance": 19,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727338
+    },
+    "014d2b80-67cd-4638-a2cb-7d7112f12151": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "014d2b80-67cd-4638-a2cb-7d7112f12151",
+        "hexcode": "B3FE3E",
+        "bestMatch": {
+            "colorName": "Bouncy Armour",
+            "targetHex": "ADFF2F",
+            "deltaE": 4.959108861577537,
+            "absoluteDistance": 22,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727351
+    },
+    "fcd35265-2097-4823-82cb-52cea1faeff1": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "fcd35265-2097-4823-82cb-52cea1faeff1",
+        "hexcode": "255558",
+        "bestMatch": {
+            "colorName": "Pearlescent Dye",
+            "targetHex": "115555",
+            "deltaE": 4.788678393896459,
+            "absoluteDistance": 23,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727364
+    },
+    "ae62a41a-af90-4700-a5e7-ea490537b165": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "ae62a41a-af90-4700-a5e7-ea490537b165",
+        "hexcode": "F2DECC",
+        "bestMatch": {
+            "colorName": "Bone Dye",
+            "targetHex": "E3DAC9",
+            "deltaE": 4.763156158894181,
+            "absoluteDistance": 22,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727377
+    },
+    "6dbbc0fd-1c36-4d49-8dcb-9eadafc6c8c6": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "6dbbc0fd-1c36-4d49-8dcb-9eadafc6c8c6",
+        "hexcode": "22AE70",
+        "bestMatch": {
+            "colorName": "Jade Dye",
+            "targetHex": "00A86B",
+            "deltaE": 2.613437864805142,
+            "absoluteDistance": 45,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727390
+    },
+    "de068290-8e97-4111-9ec4-97ead7f4de5b": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "de068290-8e97-4111-9ec4-97ead7f4de5b",
+        "hexcode": "7ED030",
+        "bestMatch": {
+            "colorName": "Exo pure green",
+            "targetHex": "7FCC19",
+            "deltaE": 4.926770912461018,
+            "absoluteDistance": 28,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727403
+    },
+    "a44c2a78-77bb-41a6-bc82-0eeff8539fb3": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "a44c2a78-77bb-41a6-bc82-0eeff8539fb3",
+        "hexcode": "0EC417",
+        "bestMatch": {
+            "colorName": "Growth Armour",
+            "targetHex": "00BE00",
+            "deltaE": 2.5224259021407125,
+            "absoluteDistance": 43,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727417
+    },
+    "e36a48b7-0073-460c-a933-4f1cddeab1cc": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "e36a48b7-0073-460c-a933-4f1cddeab1cc",
+        "hexcode": "A19FA2",
+        "bestMatch": {
+            "colorName": "Exo pure light grey",
+            "targetHex": "999999",
+            "deltaE": 3.111416150364514,
+            "absoluteDistance": 23,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727430
+    },
+    "4e330212-754d-4a9b-b410-97a3e3f9909d": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "4e330212-754d-4a9b-b410-97a3e3f9909d",
+        "hexcode": "16B708",
+        "bestMatch": {
+            "colorName": "Growth Armour",
+            "targetHex": "00BE00",
+            "deltaE": 4.75461408655701,
+            "absoluteDistance": 37,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727443
+    },
+    "f10c6819-06c7-44d2-a472-e9f2984edcae": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "f10c6819-06c7-44d2-a472-e9f2984edcae",
+        "hexcode": "035755",
+        "bestMatch": {
+            "colorName": "Pearlescent Dye",
+            "targetHex": "115555",
+            "deltaE": 2.637638859816816,
+            "absoluteDistance": 16,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727456
+    },
+    "bb33dd38-c101-46d5-a741-7b661bf5f462": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "bb33dd38-c101-46d5-a741-7b661bf5f462",
+        "hexcode": "E2E3CE",
+        "bestMatch": {
+            "colorName": "Bone Dye",
+            "targetHex": "E3DAC9",
+            "deltaE": 4.817115665387448,
+            "absoluteDistance": 15,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727468
+    },
+    "cf9f01a2-3654-4fec-b1c9-2d448747ac1f": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "cf9f01a2-3654-4fec-b1c9-2d448747ac1f",
+        "hexcode": "7FD31C",
+        "bestMatch": {
+            "colorName": "Exo pure green",
+            "targetHex": "7FCC19",
+            "deltaE": 3.6617837592885896,
+            "absoluteDistance": 10,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727482
+    },
+    "3506ad37-1f62-46c1-892d-44e8003b70cb": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "3506ad37-1f62-46c1-892d-44e8003b70cb",
+        "hexcode": "EAFAD3",
+        "bestMatch": {
+            "colorName": "Nyanza Dye",
+            "targetHex": "E9FFDB",
+            "deltaE": 2.978668289604049,
+            "absoluteDistance": 14,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727494
+    },
+    "e3790ce0-5d2c-4f5b-9d17-f57771b9f327": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "e3790ce0-5d2c-4f5b-9d17-f57771b9f327",
+        "hexcode": "A5E5B3",
+        "bestMatch": {
+            "colorName": "Celadon Dye",
+            "targetHex": "ACE1AF",
+            "deltaE": 3.694927320897608,
+            "absoluteDistance": 15,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727509
+    },
+    "b276c851-6f7d-4fc1-9734-d4f9a05b1756": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "b276c851-6f7d-4fc1-9734-d4f9a05b1756",
+        "hexcode": "DCFBFA",
+        "bestMatch": {
+            "colorName": "Speedster Set/Mercenary Boots",
+            "targetHex": "E0FCF7",
+            "deltaE": 2.270485425687941,
+            "absoluteDistance": 8,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727521
+    },
+    "46b179a8-24fa-40a2-af05-c08a02deb9a3": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "46b179a8-24fa-40a2-af05-c08a02deb9a3",
+        "hexcode": "E8E43D",
+        "bestMatch": {
+            "colorName": "Exo pure yellow",
+            "targetHex": "E5E533",
+            "deltaE": 3.5533187610706434,
+            "absoluteDistance": 14,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727534
+    },
+    "a78fcbb1-cabf-4a8e-a404-458fda79574d": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "a78fcbb1-cabf-4a8e-a404-458fda79574d",
+        "hexcode": "7ED02F",
+        "bestMatch": {
+            "colorName": "Exo pure green",
+            "targetHex": "7FCC19",
+            "deltaE": 4.654349846278688,
+            "absoluteDistance": 27,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727548
+    },
+    "f133dda1-c677-4816-ad29-dc6a1c4363da": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "f133dda1-c677-4816-ad29-dc6a1c4363da",
+        "hexcode": "76D122",
+        "bestMatch": {
+            "colorName": "Exo pure green",
+            "targetHex": "7FCC19",
+            "deltaE": 4.955231063727202,
+            "absoluteDistance": 23,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727560
+    },
+    "8822ec72-6c35-41d1-9c3a-877b7e336d07": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "8822ec72-6c35-41d1-9c3a-877b7e336d07",
+        "hexcode": "E1DB23",
+        "bestMatch": {
+            "colorName": "Exo pure yellow",
+            "targetHex": "E5E533",
+            "deltaE": 4.265166815626375,
+            "absoluteDistance": 30,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727573
+    },
+    "d932ed3a-43ad-4d6e-a1cc-a309bdd18c1d": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "d932ed3a-43ad-4d6e-a1cc-a309bdd18c1d",
+        "hexcode": "1DC906",
+        "bestMatch": {
+            "colorName": "Growth Armour",
+            "targetHex": "00BE00",
+            "deltaE": 4.638829126958452,
+            "absoluteDistance": 46,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727586
+    },
+    "6f7dea4b-2825-4657-9b4c-747593c9e6c5": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "6f7dea4b-2825-4657-9b4c-747593c9e6c5",
+        "hexcode": "55D27E",
+        "bestMatch": {
+            "colorName": "Emerald Dye",
+            "targetHex": "50C878",
+            "deltaE": 3.9856251499703563,
+            "absoluteDistance": 21,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727599
+    },
+    "2fe77e31-d68f-4b35-a71d-34dd41fa8c39": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "2fe77e31-d68f-4b35-a71d-34dd41fa8c39",
+        "hexcode": "04FC16",
+        "bestMatch": {
+            "colorName": "Pure Green",
+            "targetHex": "00FF00",
+            "deltaE": 3.1171812633331673,
+            "absoluteDistance": 29,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727612
+    },
+    "26e71f9d-45f2-4283-85cd-7aa34d5858a3": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "26e71f9d-45f2-4283-85cd-7aa34d5858a3",
+        "hexcode": "115C5C",
+        "bestMatch": {
+            "colorName": "Pearlescent Dye",
+            "targetHex": "115555",
+            "deltaE": 3.042346301362305,
+            "absoluteDistance": 14,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727624
+    },
+    "60aac9b0-0209-4705-bf77-3b9ac188bba7": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "60aac9b0-0209-4705-bf77-3b9ac188bba7",
+        "hexcode": "A8780C",
+        "bestMatch": {
+            "colorName": "Rotten Helm+Boots",
+            "targetHex": "9E7003",
+            "deltaE": 3.4787952174889227,
+            "absoluteDistance": 27,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727625
+    },
+    "bec25526-44c5-4024-b646-3057ed449943": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "bec25526-44c5-4024-b646-3057ed449943",
+        "hexcode": "7BAC3A",
+        "bestMatch": {
+            "colorName": "Fermento Boots",
+            "targetHex": "83B03B",
+            "deltaE": 2.6174985226900467,
+            "absoluteDistance": 13,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727637
+    },
+    "457d489f-50c1-45d0-9e96-40530a096e14": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "457d489f-50c1-45d0-9e96-40530a096e14",
+        "hexcode": "02AC76",
+        "bestMatch": {
+            "colorName": "Fervor Boots",
+            "targetHex": "07A674",
+            "deltaE": 3.2524038786850644,
+            "absoluteDistance": 13,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727650
+    },
+    "8ed18131-13c0-400a-abae-b43d404fd3ea": {
+        "pieceName": "Velvet Top Hat",
+        "uuid": "8ed18131-13c0-400a-abae-b43d404fd3ea",
+        "hexcode": "74C418",
+        "bestMatch": {
+            "colorName": "Exo pure green",
+            "targetHex": "7FCC19",
+            "deltaE": 3.914079291129429,
+            "absoluteDistance": 20,
+            "tier": 2
+        },
+        "chestLocation": {
+            "x": -2,
+            "y": 207,
+            "z": -70
+        },
+        "timestamp": 1760803727663
+    }
+}
