@@ -225,7 +225,7 @@ function getPriorityScore(isFade, tier) {
   }
 }
 
-// ===== EXTRACT HEX FROM ITEM =====
+// ===== EXTRACT HEX FROM ITEM (FIXED TO HANDLE SHORT HEX CODES) =====
 function extractHexFromLore(loreArray) {
   try {
     if (!loreArray || loreArray.length === 0) return null;
@@ -235,17 +235,21 @@ function extractHexFromLore(loreArray) {
       
       if (line && line.includes("Color:") && line.includes("#")) {
         const cleaned = line.replace(/§./g, '');
-        const match = cleaned.match(/#([0-9A-Fa-f]{6})/);
+        // Match hex codes with 1-6 characters after the #
+        const match = cleaned.match(/#([0-9A-Fa-f]{1,6})/);
         if (match) {
-          return match[1].toUpperCase();
+          // Pad with leading zeros to make it 6 characters
+          return match[1].toUpperCase().padStart(6, '0');
         }
       }
       
       const text = ChatLib.removeFormatting(line || "");
       if (text && text.includes("Color:")) {
-        const match = text.match(/([0-9A-Fa-f]{6})/);
+        // Match hex codes with 1-6 characters
+        const match = text.match(/([0-9A-Fa-f]{1,6})/);
         if (match) {
-          return match[1].toUpperCase();
+          // Pad with leading zeros to make it 6 characters
+          return match[1].toUpperCase().padStart(6, '0');
         }
       }
     }
@@ -1039,46 +1043,49 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
       Renderer.drawStringWithShadow("§l§nSeymour Analysis", boxX + 5, boxY + 5);
     }
     
-    if (isShiftHeld) {
-      Renderer.drawStringWithShadow("§7§lTop 3 Matches:", boxX + 5, boxY + 18);
-      
-      for (let i = 0; i < 3 && i < infoData.top3.length; i++) {
-        const match = infoData.top3[i];
-        const yPos = boxY + 30 + (i * 25);
-        
-        let colorPrefix;
-        if (match.isFade) {
-          colorPrefix = match.tier === 0 ? "§9" : (match.tier === 1 ? "§b" : (match.tier === 2 ? "§e" : "§7"));
-        } else {
-          colorPrefix = match.tier === 0 ? "§c" : (match.tier === 1 ? "§d" : (match.tier === 2 ? "§6" : "§7"));
-        }
-        
-        Renderer.drawStringWithShadow(colorPrefix + (i + 1) + ". §f" + match.name, boxX + 5, yPos);
-        Renderer.drawStringWithShadow("§7  ΔE: " + colorPrefix + match.deltaE.toFixed(2) + " §7#" + match.targetHex, boxX + 5, yPos + 10);
-      }
+// Display piece hex at the top
+Renderer.drawStringWithShadow("§7Piece: §f#" + infoData.itemHex, boxX + 5, boxY + 18);
+
+if (isShiftHeld) {
+  Renderer.drawStringWithShadow("§7§lTop 3 Matches:", boxX + 5, boxY + 28);
+  
+  for (let i = 0; i < 3 && i < infoData.top3.length; i++) {
+    const match = infoData.top3[i];
+    const yPos = boxY + 40 + (i * 25);
+    
+    let colorPrefix;
+    if (match.isFade) {
+      colorPrefix = match.tier === 0 ? "§9" : (match.tier === 1 ? "§b" : (match.tier === 2 ? "§e" : "§7"));
     } else {
-      Renderer.drawStringWithShadow("§7Closest: §f" + infoData.name, boxX + 5, boxY + 18);
-      Renderer.drawStringWithShadow("§7Target: §7#" + infoData.hex, boxX + 5, boxY + 28);
-      
-      let deltaColorPrefix;
-      if (infoData.isFadeDye) {
-        deltaColorPrefix = infoData.tier === 0 ? "§9" : (infoData.tier === 1 ? "§b" : (infoData.tier === 2 ? "§e" : "§7"));
-      } else {
-        deltaColorPrefix = infoData.tier === 0 ? "§c" : (infoData.tier === 1 ? "§d" : (infoData.tier === 2 ? "§6" : "§7"));
-      }
-      
-      Renderer.drawStringWithShadow(deltaColorPrefix + "ΔE: §f" + infoData.deltaE.toFixed(2), boxX + 5, boxY + 38);
-      Renderer.drawStringWithShadow("§7Absolute: §f" + infoData.absoluteDist, boxX + 5, boxY + 48);
-      
-      let tierText;
-      if (infoData.isFadeDye) {
-        tierText = infoData.tier === 0 ? "§9§lT1<" : (infoData.tier === 1 ? "§b§lT1" : (infoData.tier === 2 ? "§e§lT2" : "§7§l✗ T3+"));
-      } else {
-        tierText = infoData.tier === 0 ? "§c§lT1<" : (infoData.tier === 1 ? "§d§lT1" : (infoData.tier === 2 ? "§6§lT2" : "§7§l✗ T3+"));
-      }
-      
-      Renderer.drawStringWithShadow(tierText, boxX + 5, boxY + 58);
+      colorPrefix = match.tier === 0 ? "§c" : (match.tier === 1 ? "§d" : (match.tier === 2 ? "§6" : "§7"));
     }
+    
+    Renderer.drawStringWithShadow(colorPrefix + (i + 1) + ". §f" + match.name, boxX + 5, yPos);
+    Renderer.drawStringWithShadow("§7  ΔE: " + colorPrefix + match.deltaE.toFixed(2) + " §7#" + match.targetHex, boxX + 5, yPos + 10);
+  }
+} else {
+  Renderer.drawStringWithShadow("§7Closest: §f" + infoData.name, boxX + 5, boxY + 28);
+  Renderer.drawStringWithShadow("§7Target: §7#" + infoData.hex, boxX + 5, boxY + 38);
+  
+  let deltaColorPrefix;
+  if (infoData.isFadeDye) {
+    deltaColorPrefix = infoData.tier === 0 ? "§9" : (infoData.tier === 1 ? "§b" : (infoData.tier === 2 ? "§e" : "§7"));
+  } else {
+    deltaColorPrefix = infoData.tier === 0 ? "§c" : (infoData.tier === 1 ? "§d" : (infoData.tier === 2 ? "§6" : "§7"));
+  }
+  
+  Renderer.drawStringWithShadow(deltaColorPrefix + "ΔE: §f" + infoData.deltaE.toFixed(2), boxX + 5, boxY + 48);
+  Renderer.drawStringWithShadow("§7Absolute: §f" + infoData.absoluteDist, boxX + 5, boxY + 58);
+  
+  let tierText;
+  if (infoData.isFadeDye) {
+    tierText = infoData.tier === 0 ? "§9§lT1<" : (infoData.tier === 1 ? "§b§lT1" : (infoData.tier === 2 ? "§e§lT2" : "§7§l✗ T3+"));
+  } else {
+    tierText = infoData.tier === 0 ? "§c§lT1<" : (infoData.tier === 1 ? "§d§lT1" : (infoData.tier === 2 ? "§6§lT2" : "§7§l✗ T3+"));
+  }
+  
+  Renderer.drawStringWithShadow(tierText, boxX + 5, boxY + 68);
+}
     
     // Restore GL state
     GL11.glEnable(GL11.GL_DEPTH_TEST);
