@@ -991,7 +991,7 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
     }
     
     const boxWidth = Math.max(170, Math.min(maxTextWidth, 400)); // max width 400
-    const boxHeight = isShiftHeld ? 110 : 70;
+    const boxHeight = isShiftHeld ? 110 : 80;
     
     const isMouseOver = actualMouseX >= boxX && actualMouseX <= boxX + boxWidth &&
                         actualMouseY >= boxY && actualMouseY <= boxY + boxHeight;
@@ -1735,3 +1735,4 @@ function searchForHexes(hexes) {
   
   return foundPieces;
 }
+
