@@ -774,7 +774,7 @@ for (let i = 0; i < loreData.length; i++) {
   }
   
   // Don't compute word matches during precache - only use cached/stored values
-const specialPattern = data.patternsEnabled ? matchesSpecialPattern(data.hex) : null;
+const specialPattern = matchesSpecialPattern(data.hex);
 itemCache.put(data.entry.stack, { 
   tier: analysis.tier, 
   isFade: analysis.isFadeDye,
@@ -853,7 +853,7 @@ register('renderItemIntoGui', function(item, x, y) {
         }
         
         const wordMatch = data.wordsEnabled ? matchesWordPattern(hex) : null;
-const specialPattern = matchesSpecialPattern(hex);
+const specialPattern = data.patternsEnabled ? matchesSpecialPattern(hex) : null;
 cacheData = { 
   tier: analysis.tier, 
   isFade: analysis.isFadeDye,
@@ -1024,7 +1024,7 @@ register("itemTooltip", function(lore, item, event) {
         const analysis = analyzeSeymourArmor(hex, itemName);
         if (!analysis) return;
         
-        const specialPattern = matchesSpecialPattern(hex);
+        const specialPattern = data.patternsEnabled ? matchesSpecialPattern(hex) : null;
 cacheData = { 
   tier: analysis.tier, 
   isFade: analysis.isFadeDye,
@@ -1047,8 +1047,8 @@ cacheData = {
                          Math.abs(itemRgb.g - targetRgb.g) + 
                          Math.abs(itemRgb.b - targetRgb.b);
     
-    const wordMatch = matchesWordPattern(cacheData.itemHex);
-const specialPattern = matchesSpecialPattern(cacheData.itemHex);
+    const wordMatch = data.wordsEnabled ? matchesWordPattern(cacheData.itemHex) : null;
+const specialPattern = data.patternsEnabled ? matchesSpecialPattern(cacheData.itemHex) : null;
 hoveredItemData = {
   name: best.name,
   hex: best.targetHex,
@@ -1224,8 +1224,8 @@ cacheData = {
                                Math.abs(itemRgb.b - targetRgb.b);
           
           // ALWAYS UPDATE when we detect a Seymour item - this fixes trade menu issues
-const wordMatch = matchesWordPattern(cacheData.itemHex);
-const specialPattern = matchesSpecialPattern(cacheData.itemHex);
+const wordMatch = data.wordsEnabled ? matchesWordPattern(cacheData.itemHex) : null;
+const specialPattern = data.patternsEnabled ? matchesSpecialPattern(cacheData.itemHex) : null;
 hoveredItemData = {
   name: best.name,
   hex: best.targetHex,
