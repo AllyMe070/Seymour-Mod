@@ -158,6 +158,8 @@ export const TARGET_COLORS = {
   "Maxor Boots": "8969C8",
   
   // Other Armor
+  "Challenger's Leggings+Boots": "7C3756",
+  "Mythos Leggings+Boots: "2A5B48",
   "Melody Shoes": "8D3592",
   "Fallen Star 3p": "586158",
   "Charlie's Trousers": "F6DE51",
@@ -345,3 +347,4 @@ export const FADE_DYES = [
   "Sunset",
   "Warden"
 ];
+
