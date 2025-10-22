@@ -126,7 +126,6 @@ rebuildLabCache();
 // Check if a color name is a fade dye
 function isFadeDye(colorName) {
   for (let i = 0; i < FADE_DYES.length; i++) {
-    // Check if it starts with the fade name AND contains "Stage" or ends with the fade name followed by " - "
     if (colorName.indexOf(FADE_DYES[i] + " - Stage") === 0) {
       return true;
     }
@@ -186,10 +185,9 @@ function matchesWordPattern(hex) {
   
   const hexUpper = hex.toUpperCase();
   
-  // Get keys directly from the PogObject - use a different approach
+  // Get keys directly from the PogObject
   const wordKeys = [];
   try {
-    // Try to access the internal data
     const rawData = wordList._data || wordList;
     for (const key in rawData) {
       if (key !== "_data" && key !== "save" && rawData.hasOwnProperty(key)) {
@@ -202,7 +200,6 @@ function matchesWordPattern(hex) {
   
   if (DEBUG) {
     ChatLib.chat("§b[Debug] Checking hex " + hexUpper + " against " + wordKeys.length + " words");
-    // Show all words in the list
     for (let i = 0; i < wordKeys.length; i++) {
       const word = wordKeys[i];
       const pattern = wordList[word];
@@ -219,7 +216,6 @@ function matchesWordPattern(hex) {
       ChatLib.chat("§b[Debug] Checking if '" + hexUpper + "' contains pattern '" + hexWord + "' for word '" + word + "'");
     }
     
-    // Check if the hex contains this hex word anywhere in it
     if (hexUpper.indexOf(hexWord) !== -1) {
       if (DEBUG) {
         ChatLib.chat("§a[Debug] ✓✓✓ WORD MATCH! " + hexUpper + " contains " + hexWord + " (word: " + word + ")");
@@ -327,7 +323,7 @@ function getPriorityScore(isFade, tier) {
   }
 }
 
-// ===== EXTRACT HEX FROM ITEM (FIXED TO HANDLE SHORT HEX CODES) =====
+// ===== EXTRACT HEX FROM ITEM =====
 function extractHexFromLore(loreArray) {
   try {
     if (!loreArray || loreArray.length === 0) return null;
@@ -337,20 +333,16 @@ function extractHexFromLore(loreArray) {
       
       if (line && line.includes("Color:") && line.includes("#")) {
         const cleaned = line.replace(/§./g, '');
-        // Match hex codes with 1-6 characters after the #
         const match = cleaned.match(/#([0-9A-Fa-f]{1,6})/);
         if (match) {
-          // Pad with leading zeros to make it 6 characters
           return match[1].toUpperCase().padStart(6, '0');
         }
       }
       
       const text = ChatLib.removeFormatting(line || "");
       if (text && text.includes("Color:")) {
-        // Match hex codes with 1-6 characters
         const match = text.match(/([0-9A-Fa-f]{1,6})/);
         if (match) {
-          // Pad with leading zeros to make it 6 characters
           return match[1].toUpperCase().padStart(6, '0');
         }
       }
@@ -386,18 +378,14 @@ function getChestLocationFromLooking() {
     const playerZ = Player.getZ();
     const player = Player.getPlayer();
     
-    // Get player's eye position (standing eye height is 1.62 blocks above feet)
     const eyeY = playerY + 1.62;
     
-    // Get player's rotation (yaw and pitch in degrees)
     const yaw = player.field_70177_z;
     const pitch = player.field_70125_A;
     
-    // Convert to radians
     const yawRad = yaw * Math.PI / 180;
     const pitchRad = pitch * Math.PI / 180;
     
-    // Calculate looking direction vector
     const dirX = -Math.sin(yawRad) * Math.cos(pitchRad);
     const dirY = -Math.sin(pitchRad);
     const dirZ = Math.cos(yawRad) * Math.cos(pitchRad);
@@ -407,7 +395,6 @@ function getChestLocationFromLooking() {
       ChatLib.chat("§b[Debug] Looking direction: " + dirX.toFixed(3) + ", " + dirY.toFixed(3) + ", " + dirZ.toFixed(3));
     }
     
-    // Raycast up to 6 blocks away
     const maxDistance = 6.0;
     const stepSize = 0.1;
     
@@ -422,7 +409,6 @@ function getChestLocationFromLooking() {
       const blockName = block.type.getName().toLowerCase();
       const blockID = block.type.getID();
       
-      // Check for chest blocks by ID or name
       const isChest = blockID === 54 || blockID === 146 || 
                       blockName.includes("chest") || 
                       blockName.includes("trapped_chest");
@@ -474,7 +460,6 @@ function analyzeSeymourArmor(itemHex, itemName) {
     
     const matches = [];
     const itemLab = hexToLab(itemHex);
-    const isTopHat = isVelvetTopHat(itemName);
     
     // Combine built-in and custom colors
     const allColorNames = Object.keys(TARGET_COLORS).concat(Object.keys(customColors));
@@ -490,12 +475,10 @@ function analyzeSeymourArmor(itemHex, itemName) {
         continue;
       }
       
-      // Skip 3p sets for helmets (Velvet Top Hats) if 3p sets filter is enabled
       if (data.threePieceSetsEnabled && pieceType === "helmet" && isThreePieceSet(name)) {
         continue;
       }
       
-      // Skip colors that don't match piece type if piece-specific mode is enabled
       if (data.pieceSpecificEnabled && !colorMatchesPieceType(name, pieceType)) {
         continue;
       }
@@ -547,6 +530,86 @@ function analyzeSeymourArmor(itemHex, itemName) {
   }
 }
 
+// ===== HELPER: GET CACHE DATA FROM COLLECTION =====
+function getCacheDataFromCollection(uuid) {
+  if (!uuid || !collection[uuid]) return null;
+  
+  const stored = collection[uuid];
+  const isFadeColor = isFadeDye(stored.bestMatch.colorName);
+  const wordMatch = (data.wordsEnabled && stored.wordMatch) ? { word: stored.wordMatch, pattern: stored.hexcode } : null;
+  const specialPattern = (data.patternsEnabled && stored.specialPattern) ? { type: stored.specialPattern, pattern: stored.hexcode } : null;
+  const fullAnalysis = analyzeSeymourArmor(stored.hexcode, "");
+  
+  return {
+    tier: stored.bestMatch.tier,
+    isFade: isFadeColor,
+    alreadyProcessed: true,
+    analysis: {
+      bestMatch: {
+        name: stored.bestMatch.colorName,
+        targetHex: stored.bestMatch.targetHex,
+        deltaE: stored.bestMatch.deltaE,
+        isFade: isFadeColor,
+        tier: stored.bestMatch.tier,
+        priority: getPriorityScore(isFadeColor, stored.bestMatch.tier)
+      },
+      top3Matches: fullAnalysis ? fullAnalysis.top3Matches : [],
+      tier: stored.bestMatch.tier,
+      isFadeDye: isFadeColor
+    },
+    itemHex: stored.hexcode,
+    wordMatch: wordMatch,
+    specialPattern: specialPattern
+  };
+}
+
+// ===== HELPER: SET HOVERED ITEM DATA =====
+function setHoveredItemData(cacheData) {
+  if (!cacheData || !cacheData.analysis) return;
+  
+  const best = cacheData.analysis.bestMatch;
+  const itemRgb = hexToRgb(cacheData.itemHex);
+  const targetRgb = hexToRgb(best.targetHex);
+  
+  const visualDist = best.deltaE;
+  const absoluteDist = Math.abs(itemRgb.r - targetRgb.r) + 
+                       Math.abs(itemRgb.g - targetRgb.g) + 
+                       Math.abs(itemRgb.b - targetRgb.b);
+  
+  hoveredItemData = {
+    name: best.name,
+    hex: best.targetHex,
+    deltaE: visualDist,
+    absoluteDist: absoluteDist,
+    tier: cacheData.tier,
+    isFadeDye: cacheData.isFade,
+    itemHex: cacheData.itemHex,
+    top3: cacheData.analysis.top3Matches,
+    wordMatch: cacheData.wordMatch,
+    specialPattern: cacheData.specialPattern,
+    timestamp: Date.now()
+  };
+}
+
+// ===== HELPER: CLEAR ALL CACHES =====
+function clearAllCaches() {
+  itemCache.clear();
+  const hexKeys = Object.keys(hexAnalysisCache);
+  for (let i = 0; i < hexKeys.length; i++) {
+    delete hexAnalysisCache[hexKeys[i]];
+  }
+  const wordKeys = Object.keys(wordMatchCache);
+  for (let i = 0; i < wordKeys.length; i++) {
+    delete wordMatchCache[wordKeys[i]];
+  }
+  // Clear UUID cache too
+  const uuidKeys = Object.keys(uuidCache);
+  for (let i = 0; i < uuidKeys.length; i++) {
+    delete uuidCache[uuidKeys[i]];
+  }
+  hoveredItemData = null;
+}
+
 // ===== SCAN CHEST CONTENTS =====
 function scanChestContents() {
   if (!scanningEnabled) return;
@@ -588,13 +651,14 @@ function scanChestContents() {
                            Math.abs(itemRgb.b - targetRgb.b);
       
       const wordMatch = matchesWordPattern(hex);
-const specialPattern = matchesSpecialPattern(hex);
-collection[uuid] = {
-  pieceName: ChatLib.removeFormatting(itemName),
-  uuid: uuid,
-  hexcode: hex,
-  specialPattern: specialPattern ? specialPattern.type : null,
-  bestMatch: {
+      const specialPattern = matchesSpecialPattern(hex);
+      
+      collection[uuid] = {
+        pieceName: ChatLib.removeFormatting(itemName),
+        uuid: uuid,
+        hexcode: hex,
+        specialPattern: specialPattern ? specialPattern.type : null,
+        bestMatch: {
           colorName: best.name,
           targetHex: best.targetHex,
           deltaE: best.deltaE,
@@ -620,32 +684,27 @@ collection[uuid] = {
 }
 
 let scanTimeout = null;
-
 let isPrecaching = false;
-
 let lastGuiOpenTime = 0;
 
 register("guiOpened", function() {
   const now = Date.now();
   
-  // Prevent clearing cache if GUI was just opened (within 500ms)
   if (now - lastGuiOpenTime < 500) {
     return;
   }
   lastGuiOpenTime = now;
   
-  // Clear cache immediately
-  itemCache.clear();
   isPrecaching = true;
   precacheComplete = false;
   
-  // Precache immediately (no delay needed)
+  // Precaching will handle all items
+  
   setTimeout(function() {
     precacheChestItems();
     isPrecaching = false;
   }, 20);
   
-  // Scan for collection (only if enabled)
   if (!scanningEnabled) return;
   
   if (scanTimeout) clearTimeout(scanTimeout);
@@ -678,12 +737,10 @@ function saveBoxPosition() {
   data.save();
 }
 
-// Don't auto-clear hover data anymore - let it persist in GUIs
 let lastGuiRenderTime = 0;
 let lastDetectedItem = null;
 
 // ===== HIGHLIGHT ITEMS =====
-// Pre-cache items when chest opens
 let lastChestOpenTime = 0;
 let precacheComplete = false;
 
@@ -695,16 +752,22 @@ function precacheChestItems() {
     const items = container.getItems();
     if (!items) return;
     
+    // Determine chest size (items before inventory)
+    // Standard chest = 27 slots, Large chest = 54 slots, Ender chest = 27, etc.
+    // Player inventory starts after the chest slots
+    const containerSize = container.getSize();
+    const chestSlots = containerSize > 54 ? 54 : (containerSize > 27 ? 27 : containerSize - 36);
+    
     let needsAnalysis = [];
     
-    // PHASE 1: Instant checks (no analysis)
-    for (let i = 0; i < items.length; i++) {
+    // PHASE 1: Instant checks (no analysis) - ONLY for chest slots, not inventory
+    for (let i = 0; i < items.length && i < chestSlots; i++) {
       const item = items[i];
       if (!item) continue;
       
       const stack = item.itemStack;
       if (itemCache.get(stack) !== null && itemCache.get(stack) !== undefined) {
-        continue; // Already cached
+        continue;
       }
       
       const name = item.getName();
@@ -716,74 +779,61 @@ function precacheChestItems() {
       
       const uuid = extractUuidFromItem(item);
       
-      // Check collection first (instant!)
       if (uuid && collection[uuid]) {
-  const stored = collection[uuid];
-  const wordMatch = stored.wordMatch ? { word: stored.wordMatch, pattern: stored.hexcode } : null;
-  const specialPattern = stored.specialPattern ? { type: stored.specialPattern, pattern: stored.hexcode } : null;
-  itemCache.put(stack, {
-    tier: stored.bestMatch.tier,
-    isFade: isFadeDye(stored.bestMatch.colorName),
-    analysis: {
-      bestMatch: {
-        name: stored.bestMatch.colorName,
-        targetHex: stored.bestMatch.targetHex,
-        deltaE: stored.bestMatch.deltaE,
-        isFade: isFadeDye(stored.bestMatch.colorName),
-        tier: stored.bestMatch.tier,
-        priority: getPriorityScore(isFadeDye(stored.bestMatch.colorName), stored.bestMatch.tier)
-      },
-      tier: stored.bestMatch.tier,
-      isFadeDye: isFadeDye(stored.bestMatch.colorName)
-    },
-    itemHex: stored.hexcode,
-    wordMatch: wordMatch,
-    specialPattern: specialPattern
-  });
-  continue;
-}
+        const cacheData = getCacheDataFromCollection(uuid);
+        if (cacheData) {
+          itemCache.put(stack, cacheData);
+          continue;
+        }
+      }
       
-      // Not in collection - needs analysis
       needsAnalysis.push({ item: item, stack: stack, name: name });
     }
     
-    // PHASE 2: Analyze remaining items (only new pieces not in collection)
-// Batch extract all lore first (faster)
-const loreData = [];
-for (let i = 0; i < needsAnalysis.length; i++) {
-  const entry = needsAnalysis[i];
-  const loreRaw = entry.item.getLore();
-  const hex = extractHexFromLore(loreRaw);
-  loreData.push({ entry: entry, hex: hex });
-}
-
-// Then analyze all at once
-for (let i = 0; i < loreData.length; i++) {
-  const data = loreData[i];
-  
-  if (!data.hex) {
-    itemCache.put(data.entry.stack, { tier: -1, isFade: false });
-    continue;
-  }
-  
-  const analysis = analyzeSeymourArmor(data.hex, data.entry.name);
-  
-  if (!analysis) {
-    itemCache.put(data.entry.stack, { tier: -1, isFade: false });
-    continue;
-  }
-  
-  // Don't compute word matches during precache - only use cached/stored values
-const specialPattern = matchesSpecialPattern(data.hex);
-itemCache.put(data.entry.stack, { 
-  tier: analysis.tier, 
-  isFade: analysis.isFadeDye,
-  analysis: analysis,
-  itemHex: data.hex,
-  wordMatch: null, // Compute lazily only when needed
-  specialPattern: specialPattern
-});
-}
+    // PHASE 2: Analyze remaining items
+    const loreData = [];
+    for (let i = 0; i < needsAnalysis.length; i++) {
+      const entry = needsAnalysis[i];
+      const loreRaw = entry.item.getLore();
+      const hex = extractHexFromLore(loreRaw);
+      loreData.push({ entry: entry, hex: hex });
+    }
+    
+    for (let i = 0; i < loreData.length; i++) {
+      const itemData = loreData[i];
+      
+      if (!itemData.hex) {
+        itemCache.put(itemData.entry.stack, { tier: -1, isFade: false });
+        continue;
+      }
+      
+      const analysis = analyzeSeymourArmor(itemData.hex, itemData.entry.name);
+      
+      if (!analysis) {
+        itemCache.put(itemData.entry.stack, { tier: -1, isFade: false });
+        continue;
+      }
+      
+      const wordMatch = data.wordsEnabled ? matchesWordPattern(itemData.hex) : null;
+      const specialPattern = data.patternsEnabled ? matchesSpecialPattern(itemData.hex) : null;
+      
+      const cacheEntry = { 
+        tier: analysis.tier, 
+        isFade: analysis.isFadeDye,
+        analysis: analysis,
+        itemHex: itemData.hex,
+        wordMatch: wordMatch,
+        specialPattern: specialPattern
+      };
+      
+      itemCache.put(itemData.entry.stack, cacheEntry);
+      
+      // ALSO cache in UUID cache for persistent lookup
+      const uuid = extractUuidFromItem(itemData.entry.item);
+      if (uuid) {
+        uuidCache[uuid] = cacheEntry;
+      }
+    }
     
     precacheComplete = true;
     
@@ -792,84 +842,85 @@ itemCache.put(data.entry.stack, {
   }
 }
 
+const uuidCache = {};
+
 register('renderItemIntoGui', function(item, x, y) {
   if (!data.highlightsEnabled && !data.infoBoxEnabled) return;
   
-  // Skip processing if precache is running
-  if (isPrecaching) return;
+  // Get UUID first to check if this is a known item
+  const uuid = extractUuidFromItem(item);
+  
+  // If precaching, only render items we already know about (inventory items)
+  if (isPrecaching || !precacheComplete) {
+    // Allow rendering of cached items (inventory) during precache
+    if (!uuid || !uuidCache[uuid]) {
+      return; // Skip unknown items during precache
+    }
+    // Continue to render known items below
+  }
   
   try {
-    const stack = item.itemStack;
-    let cacheData = itemCache.get(stack);
+    const name = item.getName();
+    if (!isSeymourArmor(name)) return;
     
-    // If not cached at all, it's not Seymour armor or needs quick analysis
-    if (cacheData === null || cacheData === undefined) {
-      const name = item.getName();
-      
-      if (!isSeymourArmor(name)) {
-        itemCache.put(stack, { tier: -1, isFade: false });
-        return;
-      }
-      
-      // This shouldn't happen if precache worked, but handle it anyway
-      const uuid = extractUuidFromItem(item);
-      
-      if (uuid && collection[uuid]) {
-  const stored = collection[uuid];
-  const wordMatch = stored.wordMatch ? { word: stored.wordMatch, pattern: stored.hexcode } : null;
-  const specialPattern = stored.specialPattern ? { type: stored.specialPattern, pattern: stored.hexcode } : null;
-  cacheData = {
-    tier: stored.bestMatch.tier,
-    isFade: isFadeDye(stored.bestMatch.colorName),
-    analysis: {
-      bestMatch: {
-        name: stored.bestMatch.colorName,
-        targetHex: stored.bestMatch.targetHex,
-        deltaE: stored.bestMatch.deltaE,
-        isFade: isFadeDye(stored.bestMatch.colorName),
-        tier: stored.bestMatch.tier,
-        priority: getPriorityScore(isFadeDye(stored.bestMatch.colorName), stored.bestMatch.tier)
-      },
-      tier: stored.bestMatch.tier,
-      isFadeDye: isFadeDye(stored.bestMatch.colorName)
-    },
-    itemHex: stored.hexcode,
-    wordMatch: wordMatch,
-    specialPattern: specialPattern
-  };
-  itemCache.put(stack, cacheData);
-      } else {
-        const loreRaw = item.getLore();
-        const hex = extractHexFromLore(loreRaw);
-        if (!hex) {
-          itemCache.put(stack, { tier: -1, isFade: false });
-          return;
-        }
-        
-        const analysis = analyzeSeymourArmor(hex, name);
-        if (!analysis) {
-          itemCache.put(stack, { tier: -1, isFade: false });
-          return;
-        }
-        
-        const wordMatch = data.wordsEnabled ? matchesWordPattern(hex) : null;
-const specialPattern = data.patternsEnabled ? matchesSpecialPattern(hex) : null;
-cacheData = { 
-  tier: analysis.tier, 
-  isFade: analysis.isFadeDye,
-  analysis: analysis,
-  itemHex: hex,
-  wordMatch: wordMatch,
-  specialPattern: specialPattern
-};
-        itemCache.put(stack, cacheData);
+    // UUID already extracted at the top of the function
+    // (no need to extract again)
+    
+    // Try UUID cache first (fastest path - for inventory items)
+    let cacheData = uuid ? uuidCache[uuid] : null;
+    
+    // If not in UUID cache, check if it's in collection (never analyzed before)
+    if (!cacheData && uuid && collection[uuid]) {
+      cacheData = getCacheDataFromCollection(uuid);
+      if (cacheData) {
+        uuidCache[uuid] = cacheData;
       }
     }
     
-    // Skip if not analyzable
+    // If still not found, check itemCache (chest items from precache)
+    if (!cacheData) {
+      const stack = item.itemStack;
+      cacheData = itemCache.get(stack);
+      
+      // If found in itemCache, also add to UUID cache
+      if (cacheData && uuid) {
+        uuidCache[uuid] = cacheData;
+      }
+      
+      // If still nothing and NOT in precache, this is a new item - analyze it once
+      if (!cacheData && !isPrecaching) {
+        const loreRaw = item.getLore();
+        const hex = extractHexFromLore(loreRaw);
+        if (!hex) return;
+        
+        const analysis = analyzeSeymourArmor(hex, name);
+        if (!analysis) return;
+        
+        const wordMatch = data.wordsEnabled ? matchesWordPattern(hex) : null;
+        const specialPattern = data.patternsEnabled ? matchesSpecialPattern(hex) : null;
+        
+        cacheData = { 
+          tier: analysis.tier, 
+          isFade: analysis.isFadeDye,
+          analysis: analysis,
+          itemHex: hex,
+          wordMatch: wordMatch,
+          specialPattern: specialPattern
+        };
+        
+        // Cache it by UUID so it's never analyzed again
+        if (uuid) {
+          uuidCache[uuid] = cacheData;
+        }
+      }
+    }
+    
+    if (!cacheData) return;
+    
+    // Skip non-Seymour or invalid items
     if (cacheData.tier === -1) return;
     
-    // NEW: Check if mouse is over this item and update hoveredItemData for info box
+    // Handle hover for info box
     if (data.infoBoxEnabled && cacheData.analysis) {
       const Mouse = Java.type("org.lwjgl.input.Mouse");
       const mc = Client.getMinecraft();
@@ -878,94 +929,64 @@ cacheData = {
       const mouseX = Mouse.getX() / scale;
       const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
       
-      // Check if mouse is EXACTLY over this item (strict bounds checking)
       if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
-        const best = cacheData.analysis.bestMatch;
-        const itemRgb = hexToRgb(cacheData.itemHex);
-        const targetRgb = hexToRgb(best.targetHex);
+        setHoveredItemData(cacheData);
         
-        const visualDist = best.deltaE;
-        const absoluteDist = Math.abs(itemRgb.r - targetRgb.r) + 
-                             Math.abs(itemRgb.g - targetRgb.g) + 
-                             Math.abs(itemRgb.b - targetRgb.b);
-        
-        hoveredItemData = {
-  name: best.name,
-  hex: best.targetHex,
-  deltaE: visualDist,
-  absoluteDist: absoluteDist,
-  tier: cacheData.tier,
-  isFadeDye: cacheData.isFade,
-  itemHex: cacheData.itemHex,
-  top3: cacheData.analysis.top3Matches,
-  wordMatch: cacheData.wordMatch,
-  specialPattern: cacheData.specialPattern,
-  renderX: x,
-  renderY: y,
-  timestamp: Date.now()
-};
-        
-        if (DEBUG) ChatLib.chat("§a[Debug] Hover at " + x + "," + y + ": " + best.name);
+        if (DEBUG) ChatLib.chat("§a[Debug] Hover at " + x + "," + y + ": " + cacheData.analysis.bestMatch.name);
       }
     }
     
-    // Draw highlights (if enabled)
-    if (data.highlightsEnabled && cacheData.tier !== -1) {
-      // Use GL11 to properly manage the matrix stack
-      const GL11 = Java.type("org.lwjgl.opengl.GL11");
-      GL11.glPushMatrix();
-      GL11.glTranslatef(0, 0, 100);
-      GL11.glDisable(GL11.GL_DEPTH_TEST);
-      
-      // CHECK IF THIS IS A SEARCH MATCH (HIGHEST PRIORITY - GREEN)
-      let isSearchMatch = false;
-      if (searchHexes.length > 0 && cacheData.itemHex) {
-        const itemHexUpper = cacheData.itemHex.toUpperCase();
-        for (let i = 0; i < searchHexes.length; i++) {
-          if (itemHexUpper === searchHexes[i]) {
-            isSearchMatch = true;
-            break;
-          }
+    // Draw highlights (MUST run every frame - this is normal!)
+    if (!data.highlightsEnabled) return;
+    
+    const GL11 = Java.type("org.lwjgl.opengl.GL11");
+    GL11.glPushMatrix();
+    GL11.glTranslatef(0, 0, 100);
+    GL11.glDisable(GL11.GL_DEPTH_TEST);
+    
+    // Check for search match
+    let isSearchMatch = false;
+    if (searchHexes.length > 0 && cacheData.itemHex) {
+      const itemHexUpper = cacheData.itemHex.toUpperCase();
+      for (let i = 0; i < searchHexes.length; i++) {
+        if (itemHexUpper === searchHexes[i]) {
+          isSearchMatch = true;
+          break;
         }
       }
-      
-      // Check for word match - use cached value
-const currentWordMatch = (data.wordsEnabled && cacheData.wordMatch) ? cacheData.wordMatch : null;
-const currentSpecialPattern = (data.patternsEnabled && cacheData.specialPattern) ? cacheData.specialPattern : null;
-
-if (isSearchMatch) {
-  // Bright green highlight for search matches (HIGHEST PRIORITY)
-  Renderer.drawRect(Renderer.color(0, 255, 0, 150), x, y, 16, 16);
-} else if (currentWordMatch && data.wordsEnabled) {
-  // Brown highlight for word matches (SECOND PRIORITY)
-  Renderer.drawRect(Renderer.color(139, 69, 19, 150), x, y, 16, 16);
-} else if (currentSpecialPattern) {
-  // Purple highlight for special patterns (SAME PRIORITY AS WORDS)
-  Renderer.drawRect(Renderer.color(147, 51, 234, 150), x, y, 16, 16);
-} else if (cacheData.tier !== 3) {
-        // Regular tier-based highlights (LOWEST PRIORITY)
-        if (cacheData.isFade) {
-          if (cacheData.tier === 0) {
-            Renderer.drawRect(Renderer.color(0, 0, 255, 120), x, y, 16, 16);
-          } else if (cacheData.tier === 1) {
-            Renderer.drawRect(Renderer.color(135, 206, 250, 120), x, y, 16, 16);
-          } else if (cacheData.tier === 2) {
-            Renderer.drawRect(Renderer.color(255, 255, 0, 120), x, y, 16, 16);
-          }
-        } else {
-          if (cacheData.tier === 0) {
-            Renderer.drawRect(Renderer.color(255, 0, 0, 120), x, y, 16, 16);
-          } else if (cacheData.tier === 1) {
-            Renderer.drawRect(Renderer.color(255, 105, 180, 120), x, y, 16, 16);
-          } else if (cacheData.tier === 2) {
-            Renderer.drawRect(Renderer.color(255, 165, 0, 120), x, y, 16, 16);
-          }
-        }
-      }
-      
-      GL11.glEnable(GL11.GL_DEPTH_TEST);
-      GL11.glPopMatrix();
     }
+    
+    const currentWordMatch = (data.wordsEnabled && cacheData.wordMatch) ? cacheData.wordMatch : null;
+    const currentSpecialPattern = (data.patternsEnabled && cacheData.specialPattern) ? cacheData.specialPattern : null;
+
+    if (isSearchMatch) {
+      Renderer.drawRect(Renderer.color(0, 255, 0, 150), x, y, 16, 16);
+    } else if (currentWordMatch && data.wordsEnabled) {
+      Renderer.drawRect(Renderer.color(139, 69, 19, 150), x, y, 16, 16);
+    } else if (currentSpecialPattern) {
+      Renderer.drawRect(Renderer.color(147, 51, 234, 150), x, y, 16, 16);
+    } else if (cacheData.tier !== 3) {
+      if (cacheData.isFade) {
+        if (cacheData.tier === 0) {
+          Renderer.drawRect(Renderer.color(0, 0, 255, 120), x, y, 16, 16);
+        } else if (cacheData.tier === 1) {
+          Renderer.drawRect(Renderer.color(135, 206, 250, 120), x, y, 16, 16);
+        } else if (cacheData.tier === 2) {
+          Renderer.drawRect(Renderer.color(255, 255, 0, 120), x, y, 16, 16);
+        }
+      } else {
+        if (cacheData.tier === 0) {
+          Renderer.drawRect(Renderer.color(255, 0, 0, 120), x, y, 16, 16);
+        } else if (cacheData.tier === 1) {
+          Renderer.drawRect(Renderer.color(255, 105, 180, 120), x, y, 16, 16);
+        } else if (cacheData.tier === 2) {
+          Renderer.drawRect(Renderer.color(255, 165, 0, 120), x, y, 16, 16);
+        }
+      }
+    }
+    
+    GL11.glEnable(GL11.GL_DEPTH_TEST);
+    GL11.glPopMatrix();
   } catch (e) {
     if (DEBUG) ChatLib.chat("§c[Debug] renderItemIntoGui error: " + e);
   }
@@ -992,31 +1013,10 @@ register("itemTooltip", function(lore, item, event) {
       const uuid = extractUuidFromItem(item);
       
       if (uuid && collection[uuid]) {
-  const stored = collection[uuid];
-  
-  // Use stored data directly
-  const wordMatch = stored.wordMatch ? { word: stored.wordMatch, pattern: stored.hexcode } : null;
-  const specialPattern = stored.specialPattern ? { type: stored.specialPattern, pattern: stored.hexcode } : null;
-  cacheData = {
-    tier: stored.bestMatch.tier,
-    isFade: isFadeDye(stored.bestMatch.colorName),
-    analysis: {
-      bestMatch: {
-        name: stored.bestMatch.colorName,
-        targetHex: stored.bestMatch.targetHex,
-        deltaE: stored.bestMatch.deltaE,
-        isFade: isFadeDye(stored.bestMatch.colorName),
-        tier: stored.bestMatch.tier,
-        priority: getPriorityScore(isFadeDye(stored.bestMatch.colorName), stored.bestMatch.tier)
-      },
-      tier: stored.bestMatch.tier,
-      isFadeDye: isFadeDye(stored.bestMatch.colorName)
-    },
-    itemHex: stored.hexcode,
-    wordMatch: wordMatch,
-    specialPattern: specialPattern
-  };
-  itemCache.put(stack, cacheData);
+        cacheData = getCacheDataFromCollection(uuid);
+        if (cacheData) {
+          itemCache.put(stack, cacheData);
+        }
       } else {
         const hex = extractHexFromLore(lore);
         if (!hex) return;
@@ -1024,43 +1024,21 @@ register("itemTooltip", function(lore, item, event) {
         const analysis = analyzeSeymourArmor(hex, itemName);
         if (!analysis) return;
         
-        const specialPattern = data.patternsEnabled ? matchesSpecialPattern(hex) : null;
-cacheData = { 
-  tier: analysis.tier, 
-  isFade: analysis.isFadeDye,
-  analysis: analysis,
-  itemHex: hex,
-  specialPattern: specialPattern
-};
+        const specialPattern = matchesSpecialPattern(hex);
+        cacheData = { 
+          tier: analysis.tier, 
+          isFade: analysis.isFadeDye,
+          analysis: analysis,
+          itemHex: hex,
+          specialPattern: specialPattern
+        };
         itemCache.put(stack, cacheData);
       }
     }
     
-    if (!cacheData.analysis) return;
+    if (!cacheData || !cacheData.analysis) return;
     
-    const best = cacheData.analysis.bestMatch;
-    const itemRgb = hexToRgb(cacheData.itemHex);
-    const targetRgb = hexToRgb(best.targetHex);
-    
-    const visualDist = best.deltaE;
-    const absoluteDist = Math.abs(itemRgb.r - targetRgb.r) + 
-                         Math.abs(itemRgb.g - targetRgb.g) + 
-                         Math.abs(itemRgb.b - targetRgb.b);
-    
-    const wordMatch = data.wordsEnabled ? matchesWordPattern(cacheData.itemHex) : null;
-const specialPattern = data.patternsEnabled ? matchesSpecialPattern(cacheData.itemHex) : null;
-hoveredItemData = {
-  name: best.name,
-  hex: best.targetHex,
-  deltaE: visualDist,
-  absoluteDist: absoluteDist,
-  tier: cacheData.tier,
-  isFadeDye: cacheData.isFade,
-  itemHex: cacheData.itemHex,
-  top3: cacheData.analysis.top3Matches,
-  wordMatch: wordMatch,
-  specialPattern: specialPattern
-};
+    setHoveredItemData(cacheData);
     
     if (DEBUG) ChatLib.chat("§a[Debug] Tooltip hoveredItemData set!");
     
@@ -1077,7 +1055,6 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
     const guiClassName = gui.getClass().getName();
     if (DEBUG) ChatLib.chat("§b[DEBUG] postGuiRender - GUI Class: " + guiClassName);
     
-    // Get properly scaled mouse coordinates
     const Mouse = Java.type("org.lwjgl.input.Mouse");
     const mc = Client.getMinecraft();
     const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
@@ -1088,10 +1065,8 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
     const GuiContainer = Java.type("net.minecraft.client.gui.inventory.GuiContainer");
     const isContainer = gui instanceof GuiContainer;
     
-    // ITEM DETECTION - Try to find hovered item
     let foundItem = null;
     
-    // Method 1: For GuiContainers (chests, trades, etc)
     if (isContainer) {
       try {
         let guiLeft, guiTop;
@@ -1119,11 +1094,7 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
         
         const container = Player.getContainer();
         if (container) {
-          const mcContainer = gui.field_147002_h;
-          const slots = mcContainer.field_75151_b;
-          
-          // Get the slot the GUI thinks is hovered (most reliable)
-          const theSlot = gui.field_147006_u; // theSlot / slotUnderMouse
+          const theSlot = gui.field_147006_u;
           
           if (theSlot && theSlot.func_75216_d()) {
             const mcStack = theSlot.func_75211_c();
@@ -1136,20 +1107,6 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
       }
     }
     
-    // Method 2: For NEU and other GUIs - scan all rendered items from cache
-    if (!foundItem && !isContainer) {
-      if (DEBUG) ChatLib.chat("§b[Debug] Trying NEU item detection...");
-      
-      // Try to get from itemTooltip cache (hoveredItemData should be set)
-      if (hoveredItemData) {
-        if (DEBUG) ChatLib.chat("§a[Debug] Using cached hoveredItemData from tooltip");
-        // Don't clear hoveredItemData, just use it
-      } else {
-        if (DEBUG) ChatLib.chat("§c[Debug] No hoveredItemData from tooltip");
-      }
-    }
-    
-    // If we found an item in a container, analyze it and UPDATE hoveredItemData
     if (foundItem) {
       const itemName = foundItem.getName();
       
@@ -1165,48 +1122,26 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
           const uuid = extractUuidFromItem(foundItem);
           
           if (uuid && collection[uuid]) {
-            const stored = collection[uuid];
-            
-            // Use stored data directly
-const wordMatch = stored.wordMatch ? { word: stored.wordMatch, pattern: stored.hexcode } : null;
-const specialPattern = stored.specialPattern ? { type: stored.specialPattern, pattern: stored.hexcode } : null;
-cacheData = {
-  tier: stored.bestMatch.tier,
-  isFade: isFadeDye(stored.bestMatch.colorName),
-  analysis: {
-    bestMatch: {
-      name: stored.bestMatch.colorName,
-      targetHex: stored.bestMatch.targetHex,
-      deltaE: stored.bestMatch.deltaE,
-      isFade: isFadeDye(stored.bestMatch.colorName),
-      tier: stored.bestMatch.tier,
-      priority: getPriorityScore(isFadeDye(stored.bestMatch.colorName), stored.bestMatch.tier)
-    },
-    tier: stored.bestMatch.tier,
-    isFadeDye: isFadeDye(stored.bestMatch.colorName)
-  },
-  itemHex: stored.hexcode,
-  wordMatch: wordMatch,
-  specialPattern: specialPattern
-};
-            itemCache.put(stack, cacheData);
+            cacheData = getCacheDataFromCollection(uuid);
+            if (cacheData) {
+              itemCache.put(stack, cacheData);
+            }
           } else {
             const loreRaw = foundItem.getLore();
             const hex = extractHexFromLore(loreRaw);
             if (hex) {
               const analysis = analyzeSeymourArmor(hex, itemName);
               if (analysis) {
-                // Don't compute word matches during render - only use cached from collection
-        const uuid = extractUuidFromItem(foundItem);
-        const wordMatch = (uuid && collection[uuid]) ? collection[uuid].wordMatch : null;
-        
-cacheData = { 
-  tier: analysis.tier, 
-  isFade: analysis.isFadeDye,
-  analysis: analysis,
-  itemHex: hex,
-  wordMatch: wordMatch
-};
+                const uuid = extractUuidFromItem(foundItem);
+                const wordMatch = (uuid && collection[uuid]) ? collection[uuid].wordMatch : null;
+                
+                cacheData = { 
+                  tier: analysis.tier, 
+                  isFade: analysis.isFadeDye,
+                  analysis: analysis,
+                  itemHex: hex,
+                  wordMatch: wordMatch
+                };
                 itemCache.put(stack, cacheData);
               }
             }
@@ -1214,36 +1149,11 @@ cacheData = {
         }
         
         if (cacheData && cacheData.analysis) {
-          const best = cacheData.analysis.bestMatch;
-          const itemRgb = hexToRgb(cacheData.itemHex);
-          const targetRgb = hexToRgb(best.targetHex);
-          
-          const visualDist = best.deltaE;
-          const absoluteDist = Math.abs(itemRgb.r - targetRgb.r) + 
-                               Math.abs(itemRgb.g - targetRgb.g) + 
-                               Math.abs(itemRgb.b - targetRgb.b);
-          
-          // ALWAYS UPDATE when we detect a Seymour item - this fixes trade menu issues
-const wordMatch = data.wordsEnabled ? matchesWordPattern(cacheData.itemHex) : null;
-const specialPattern = data.patternsEnabled ? matchesSpecialPattern(cacheData.itemHex) : null;
-hoveredItemData = {
-  name: best.name,
-  hex: best.targetHex,
-  deltaE: visualDist,
-  absoluteDist: absoluteDist,
-  tier: cacheData.tier,
-  isFadeDye: cacheData.isFade,
-  itemHex: cacheData.itemHex,
-  top3: cacheData.analysis.top3Matches,
-  wordMatch: wordMatch,
-  specialPattern: specialPattern,
-  timestamp: Date.now() // Track when updated
-};
+          setHoveredItemData(cacheData);
 
           if (DEBUG) ChatLib.chat("§a[Debug] hoveredItemData FORCE UPDATED from container!");
         }
       }
-      // If NOT Seymour armor, don't update hoveredItemData (keep previous data)
     }
     
     // RENDER INFO BOX
@@ -1268,11 +1178,10 @@ hoveredItemData = {
     const boxX = boxPosition.x;
     const boxY = boxPosition.y;
     
-    // Calculate dynamic width based on content
-    let maxTextWidth = 170; // minimum width
+    // Calculate dynamic width
+    let maxTextWidth = 170;
     
     if (isShiftHeld) {
-      // Check top 3 matches for longest text
       for (let i = 0; i < 3 && i < infoData.top3.length; i++) {
         const match = infoData.top3[i];
         const line1 = (i + 1) + ". " + match.name;
@@ -1285,7 +1194,6 @@ hoveredItemData = {
         if (width2 > maxTextWidth) maxTextWidth = width2;
       }
     } else {
-      // Check regular info for longest text
       const texts = [
         "Closest: " + infoData.name,
         "Target: #" + infoData.hex,
@@ -1299,16 +1207,14 @@ hoveredItemData = {
       }
     }
     
-    const boxWidth = Math.max(170, Math.min(maxTextWidth, 400)); // max width 400
-// Calculate height based on what's shown
-let boxHeight = isShiftHeld ? 110 : 80; // base height
-if (data.wordsEnabled && infoData.wordMatch) boxHeight += 10; // add 10 for word match
-if (data.patternsEnabled && infoData.specialPattern) boxHeight += 10; // add 10 for special pattern
+    const boxWidth = Math.max(170, Math.min(maxTextWidth, 400));
+    let boxHeight = isShiftHeld ? 110 : 80;
+    if (data.wordsEnabled && infoData.wordMatch) boxHeight += 10;
+    if (data.patternsEnabled && infoData.specialPattern) boxHeight += 10;
     
     const isMouseOver = actualMouseX >= boxX && actualMouseX <= boxX + boxWidth &&
                         actualMouseY >= boxY && actualMouseY <= boxY + boxHeight;
     
-    // Disable depth test and ensure proper blending
     const GL11 = Java.type("org.lwjgl.opengl.GL11");
     GL11.glPushMatrix();
     GL11.glDisable(GL11.GL_DEPTH_TEST);
@@ -1316,7 +1222,7 @@ if (data.patternsEnabled && infoData.specialPattern) boxHeight += 10; // add 10 
     GL11.glEnable(GL11.GL_BLEND);
     GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
     GL11.glColor4f(1.0, 1.0, 1.0, 1.0);
-    GL11.glTranslatef(0, 0, 500); // Move to higher Z-index
+    GL11.glTranslatef(0, 0, 500);
 
     const bgAlpha = 255;
     Renderer.drawRect(Renderer.color(0, 0, 0, bgAlpha), boxX, boxY, boxWidth, boxHeight);
@@ -1355,63 +1261,61 @@ if (data.patternsEnabled && infoData.specialPattern) boxHeight += 10; // add 10 
       Renderer.drawStringWithShadow("§l§nSeymour Analysis", boxX + 5, boxY + 5);
     }
     
-// Display piece hex at the top
-Renderer.drawStringWithShadow("§7Piece: §f#" + infoData.itemHex, boxX + 5, boxY + 18);
+    Renderer.drawStringWithShadow("§7Piece: §f#" + infoData.itemHex, boxX + 5, boxY + 18);
 
-// Show word match if exists (but don't exit early - continue showing analysis)
-let currentYOffset = 28;
-if (data.wordsEnabled && infoData.wordMatch) {
-  Renderer.drawStringWithShadow("§d§l✦ WORD: " + infoData.wordMatch.word, boxX + 5, boxY + currentYOffset);
-  currentYOffset += 10; // Move down for next line
-}
-if (data.patternsEnabled && infoData.specialPattern) {
-  const patternName = infoData.specialPattern.type === "paired" ? "PAIRED" : 
-                      (infoData.specialPattern.type === "repeating" ? "REPEATING" : "PALINDROME");
-  Renderer.drawStringWithShadow("§5§l★ PATTERN: " + patternName, boxX + 5, boxY + currentYOffset);
-  currentYOffset += 10;
-}
-if (isShiftHeld) {
-  Renderer.drawStringWithShadow("§7§lTop 3 Matches:", boxX + 5, boxY + currentYOffset);
-  
-  for (let i = 0; i < 3 && i < infoData.top3.length; i++) {
-    const match = infoData.top3[i];
-    const yPos = boxY + currentYOffset + 12 + (i * 25);
-    
-    let colorPrefix;
-    if (match.isFade) {
-      colorPrefix = match.tier === 0 ? "§9" : (match.tier === 1 ? "§b" : (match.tier === 2 ? "§e" : "§7"));
-    } else {
-      colorPrefix = match.tier === 0 ? "§c" : (match.tier === 1 ? "§d" : (match.tier === 2 ? "§6" : "§7"));
+    let currentYOffset = 28;
+    if (data.wordsEnabled && infoData.wordMatch) {
+      Renderer.drawStringWithShadow("§d§l✦ WORD: " + infoData.wordMatch.word, boxX + 5, boxY + currentYOffset);
+      currentYOffset += 10;
+    }
+    if (data.patternsEnabled && infoData.specialPattern) {
+      const patternName = infoData.specialPattern.type === "paired" ? "PAIRED" : 
+                          (infoData.specialPattern.type === "repeating" ? "REPEATING" : "PALINDROME");
+      Renderer.drawStringWithShadow("§5§l★ PATTERN: " + patternName, boxX + 5, boxY + currentYOffset);
+      currentYOffset += 10;
     }
     
-    Renderer.drawStringWithShadow(colorPrefix + (i + 1) + ". §f" + match.name, boxX + 5, yPos);
-    Renderer.drawStringWithShadow("§7  ΔE: " + colorPrefix + match.deltaE.toFixed(2) + " §7#" + match.targetHex, boxX + 5, yPos + 10);
-  }
-} else {
-  Renderer.drawStringWithShadow("§7Closest: §f" + infoData.name, boxX + 5, boxY + currentYOffset);
-  Renderer.drawStringWithShadow("§7Target: §7#" + infoData.hex, boxX + 5, boxY + currentYOffset + 10);
-  
-  let deltaColorPrefix;
-  if (infoData.isFadeDye) {
-    deltaColorPrefix = infoData.tier === 0 ? "§9" : (infoData.tier === 1 ? "§b" : (infoData.tier === 2 ? "§e" : "§7"));
-  } else {
-    deltaColorPrefix = infoData.tier === 0 ? "§c" : (infoData.tier === 1 ? "§d" : (infoData.tier === 2 ? "§6" : "§7"));
-  }
-  
-  Renderer.drawStringWithShadow(deltaColorPrefix + "ΔE: §f" + infoData.deltaE.toFixed(2), boxX + 5, boxY + currentYOffset + 20);
-  Renderer.drawStringWithShadow("§7Absolute: §f" + infoData.absoluteDist, boxX + 5, boxY + currentYOffset + 30);
-  
-  let tierText;
-  if (infoData.isFadeDye) {
-    tierText = infoData.tier === 0 ? "§9§lT1<" : (infoData.tier === 1 ? "§b§lT1" : (infoData.tier === 2 ? "§e§lT2" : "§7§l✗ T3+"));
-  } else {
-    tierText = infoData.tier === 0 ? "§c§lT1<" : (infoData.tier === 1 ? "§d§lT1" : (infoData.tier === 2 ? "§6§lT2" : "§7§l✗ T3+"));
-  }
-  
-  Renderer.drawStringWithShadow(tierText, boxX + 5, boxY + currentYOffset + 40);
-}
+    if (isShiftHeld) {
+      Renderer.drawStringWithShadow("§7§lTop 3 Matches:", boxX + 5, boxY + currentYOffset);
+      
+      for (let i = 0; i < 3 && i < infoData.top3.length; i++) {
+        const match = infoData.top3[i];
+        const yPos = boxY + currentYOffset + 12 + (i * 25);
+        
+        let colorPrefix;
+        if (match.isFade) {
+          colorPrefix = match.tier === 0 ? "§9" : (match.tier === 1 ? "§b" : (match.tier === 2 ? "§e" : "§7"));
+        } else {
+          colorPrefix = match.tier === 0 ? "§c" : (match.tier === 1 ? "§d" : (match.tier === 2 ? "§6" : "§7"));
+        }
+        
+        Renderer.drawStringWithShadow(colorPrefix + (i + 1) + ". §f" + match.name, boxX + 5, yPos);
+        Renderer.drawStringWithShadow("§7  ΔE: " + colorPrefix + match.deltaE.toFixed(2) + " §7#" + match.targetHex, boxX + 5, yPos + 10);
+      }
+    } else {
+      Renderer.drawStringWithShadow("§7Closest: §f" + infoData.name, boxX + 5, boxY + currentYOffset);
+      Renderer.drawStringWithShadow("§7Target: §7#" + infoData.hex, boxX + 5, boxY + currentYOffset + 10);
+      
+      let deltaColorPrefix;
+      if (infoData.isFadeDye) {
+        deltaColorPrefix = infoData.tier === 0 ? "§9" : (infoData.tier === 1 ? "§b" : (infoData.tier === 2 ? "§e" : "§7"));
+      } else {
+        deltaColorPrefix = infoData.tier === 0 ? "§c" : (infoData.tier === 1 ? "§d" : (infoData.tier === 2 ? "§6" : "§7"));
+      }
+      
+      Renderer.drawStringWithShadow(deltaColorPrefix + "ΔE: §f" + infoData.deltaE.toFixed(2), boxX + 5, boxY + currentYOffset + 20);
+      Renderer.drawStringWithShadow("§7Absolute: §f" + infoData.absoluteDist, boxX + 5, boxY + currentYOffset + 30);
+      
+      let tierText;
+      if (infoData.isFadeDye) {
+        tierText = infoData.tier === 0 ? "§9§lT1<" : (infoData.tier === 1 ? "§b§lT1" : (infoData.tier === 2 ? "§e§lT2" : "§7§l✗ T3+"));
+      } else {
+        tierText = infoData.tier === 0 ? "§c§lT1<" : (infoData.tier === 1 ? "§d§lT1" : (infoData.tier === 2 ? "§6§lT2" : "§7§l✗ T3+"));
+      }
+      
+      Renderer.drawStringWithShadow(tierText, boxX + 5, boxY + currentYOffset + 40);
+    }
     
-    // Restore GL state
     GL11.glEnable(GL11.GL_DEPTH_TEST);
     GL11.glPopMatrix();
     
@@ -1429,7 +1333,6 @@ register("guiMouseClick", function(mouseX, mouseY, button, gui, event) {
   const Keyboard = Java.type("org.lwjgl.input.Keyboard");
   if (!Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) && !Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)) return;
   
-  // Get properly scaled mouse coordinates
   const Mouse = Java.type("org.lwjgl.input.Mouse");
   const mc = Client.getMinecraft();
   const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
@@ -1460,7 +1363,6 @@ register("guiMouseRelease", function(mouseX, mouseY, button, gui, event) {
   }
 });
 
-// Fallback dragging handler for trade menus and other GUIs
 register("renderOverlay", function() {
   if (!hoveredItemData) return;
   
@@ -1478,7 +1380,6 @@ register("renderOverlay", function() {
   const boxWidth = 170;
   const boxHeight = 110;
   
-  // Check if we should start dragging
   if (isMouseDown && !lastMouseDown && !isDragging) {
     if (mouseX >= boxPosition.x && mouseX <= boxPosition.x + boxWidth &&
         mouseY >= boxPosition.y && mouseY <= boxPosition.y + boxHeight) {
@@ -1488,7 +1389,6 @@ register("renderOverlay", function() {
     }
   }
   
-  // Stop dragging
   if (!isMouseDown && lastMouseDown && isDragging) {
     saveBoxPosition();
     ChatLib.chat("§a[Seymour Analyzer] §7Position saved!");
@@ -1499,12 +1399,11 @@ register("renderOverlay", function() {
 });
 
 register("guiClosed", function() {
-  itemCache.clear();
   hoveredItemData = null;
   isDragging = false;
 });
 
-// ===== RENDER CHEST HIGHLIGHTS (DEBUG) =====
+// ===== RENDER CHEST HIGHLIGHTS =====
 register("renderWorld", function(partialTicks) {
   if (highlightedChests.length === 0) return;
   
@@ -1517,7 +1416,6 @@ register("renderWorld", function(partialTicks) {
     const tessellator = Tessellator.func_178181_a();
     const worldRenderer = tessellator.func_178180_c();
     
-    // Get player's interpolated position
     const player = Player.getPlayer();
     const x = player.field_70142_S + (player.field_70165_t - player.field_70142_S) * partialTicks;
     const y = player.field_70137_T + (player.field_70163_u - player.field_70137_T) * partialTicks;
@@ -1534,11 +1432,10 @@ register("renderWorld", function(partialTicks) {
     for (let i = 0; i < highlightedChests.length; i++) {
       const chest = highlightedChests[i];
       
-      // Green color with alpha
       const r = 0.0, g = 1.0, b = 0.0, a = 0.8;
       
       // Bottom face
-      worldRenderer.func_181668_a(3, DefaultVertexFormats.field_181706_f); // GL_LINE_LOOP
+      worldRenderer.func_181668_a(3, DefaultVertexFormats.field_181706_f);
       worldRenderer.func_181662_b(chest.x, chest.y, chest.z).func_181666_a(r, g, b, a).func_181675_d();
       worldRenderer.func_181662_b(chest.x + 1, chest.y, chest.z).func_181666_a(r, g, b, a).func_181675_d();
       worldRenderer.func_181662_b(chest.x + 1, chest.y, chest.z + 1).func_181666_a(r, g, b, a).func_181675_d();
@@ -1554,7 +1451,7 @@ register("renderWorld", function(partialTicks) {
       tessellator.func_78381_a();
       
       // Vertical lines
-      worldRenderer.func_181668_a(1, DefaultVertexFormats.field_181706_f); // GL_LINES
+      worldRenderer.func_181668_a(1, DefaultVertexFormats.field_181706_f);
       worldRenderer.func_181662_b(chest.x, chest.y, chest.z).func_181666_a(r, g, b, a).func_181675_d();
       worldRenderer.func_181662_b(chest.x, chest.y + 1, chest.z).func_181666_a(r, g, b, a).func_181675_d();
       
@@ -1585,7 +1482,6 @@ let executionCount = 0;
 register("command", function() {
   executionCount++;
   
-  // Prevent multiple simultaneous executions
   if (commandExecuting) {
     return;
   }
@@ -1620,12 +1516,7 @@ register("command", function() {
   
   // Handle clear subcommand
   if (arg1 && arg1.toLowerCase() === "clear") {
-    itemCache.clear();
-    const keys = Object.keys(hexAnalysisCache);
-    for (let i = 0; i < keys.length; i++) {
-      delete hexAnalysisCache[keys[i]];
-    }
-    hoveredItemData = null;
+    clearAllCaches();
     
     const collectionKeys = Object.keys(collection);
     for (let i = 0; i < collectionKeys.length; i++) {
@@ -1638,22 +1529,21 @@ register("command", function() {
   }
   
   // Handle search subcommand
-if (arg1 && arg1.toLowerCase() === "search") {
-  const hexArgs = args.slice(1);
-  const argString = hexArgs.join(" ");
-  
-  // Check for clear command
-  if (arg2 && arg2.toLowerCase() === "clear") {
-    highlightedChests = [];
-    searchHexes = [];
-    ChatLib.chat("§a[Seymour Analyzer] §7Search cleared!");
-    return;
-  }
-  
-  if (!argString || argString.trim() === "") {
-    ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour search <hexcodes> or /seymour search clear");
-    return;
-  }
+  if (arg1 && arg1.toLowerCase() === "search") {
+    const hexArgs = args.slice(1);
+    const argString = hexArgs.join(" ");
+    
+    if (arg2 && arg2.toLowerCase() === "clear") {
+      highlightedChests = [];
+      searchHexes = [];
+      ChatLib.chat("§a[Seymour Analyzer] §7Search cleared!");
+      return;
+    }
+    
+    if (!argString || argString.trim() === "") {
+      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour search <hexcodes> or /seymour search clear");
+      return;
+    }
     
     const hexCodes = argString.split(/\s+/).filter(function(s) { return s.length > 0; });
     const validHexes = [];
@@ -1701,6 +1591,7 @@ if (arg1 && arg1.toLowerCase() === "search") {
     ChatLib.chat("§8§m----------------------------------------------------");
     return;
   }
+  
   // Handle rebuild subcommand
   if (arg1 && arg1.toLowerCase() === "rebuild") {
     if (!arg2 || arg2.toLowerCase() !== "words") {
@@ -1722,11 +1613,7 @@ if (arg1 && arg1.toLowerCase() === "search") {
     }
     
     collection.save();
-    itemCache.clear();
-    const wordCacheKeys = Object.keys(wordMatchCache);
-    for (let i = 0; i < wordCacheKeys.length; i++) {
-      delete wordMatchCache[wordCacheKeys[i]];
-    }
+    clearAllCaches();
     
     ChatLib.chat("§a[Seymour Analyzer] §7Rebuilt word matches for §e" + updatedCount + " §7pieces!");
     return;
@@ -1851,13 +1738,8 @@ if (arg1 && arg1.toLowerCase() === "search") {
     customColors[colorName] = hex;
     customColors.save();
     
-    // Rebuild caches
     rebuildLabCache();
-    itemCache.clear();
-    const cacheKeys = Object.keys(hexAnalysisCache);
-    for (let i = 0; i < cacheKeys.length; i++) {
-      delete hexAnalysisCache[cacheKeys[i]];
-    }
+    clearAllCaches();
     
     ChatLib.chat("§a[Seymour Analyzer] §7Added custom color: §f" + colorName + " §7(#" + hex + ")");
     return;
@@ -1882,129 +1764,106 @@ if (arg1 && arg1.toLowerCase() === "search") {
     delete customColors[colorName];
     customColors.save();
     
-    // Rebuild caches
     rebuildLabCache();
-    itemCache.clear();
-    const cacheKeys = Object.keys(hexAnalysisCache);
-    for (let i = 0; i < cacheKeys.length; i++) {
-      delete hexAnalysisCache[cacheKeys[i]];
-    }
+    clearAllCaches();
     
     ChatLib.chat("§a[Seymour Analyzer] §7Removed custom color: §f" + colorName + " §7(#" + hex + ")");
     return;
   }
   
-  // Handle word add subcommand
-if (arg1 && arg1.toLowerCase() === "word") {
-  if (!arg2) {
-    ChatLib.chat("§a[Seymour Analyzer] §7Usage:");
-    ChatLib.chat("  §e/seymour word add <word> <pattern>");
-    ChatLib.chat("  §e/seymour word remove <word>");
-    ChatLib.chat("  §e/seymour word list");
-    return;
-  }
-  
-  if (arg2.toLowerCase() === "add") {
-  if (DEBUG) {
-    ChatLib.chat("§b[Debug] Word add args: " + JSON.stringify(args));
-  }
-  
-  if (!args[2] || !args[3]) {
-    ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour word add <word> <hexword>");
-    ChatLib.chat("§7Example: /seymour word add BOOB B00B");
-    ChatLib.chat("§7This will match any hex containing 'B00B'");
-    return;
-  }
-  
-  const word = args[2].toUpperCase();
-  const hexWord = args[3].replace(/#/g, "").toUpperCase().trim();
-  
-  if (DEBUG) {
-    ChatLib.chat("§b[Debug] Parsed - word: '" + word + "', hexWord: '" + hexWord + "'");
-  }
-    
-    // Validate input contains only valid hex characters
-    if (!/^[0-9A-F]+$/.test(hexWord)) {
-      ChatLib.chat("§a[Seymour Analyzer] §cWord must only contain 0-9 and A-F!");
+  // Handle word subcommand
+  if (arg1 && arg1.toLowerCase() === "word") {
+    if (!arg2) {
+      ChatLib.chat("§a[Seymour Analyzer] §7Usage:");
+      ChatLib.chat("  §e/seymour word add <word> <pattern>");
+      ChatLib.chat("  §e/seymour word remove <word>");
+      ChatLib.chat("  §e/seymour word list");
       return;
     }
     
-    if (hexWord.length < 1 || hexWord.length > 6) {
-      ChatLib.chat("§a[Seymour Analyzer] §cWord must be 1-6 characters long!");
+    if (arg2.toLowerCase() === "add") {
+      if (DEBUG) {
+        ChatLib.chat("§b[Debug] Word add args: " + JSON.stringify(args));
+      }
+      
+      if (!args[2] || !args[3]) {
+        ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour word add <word> <hexword>");
+        ChatLib.chat("§7Example: /seymour word add BOOB B00B");
+        ChatLib.chat("§7This will match any hex containing 'B00B'");
+        return;
+      }
+      
+      const word = args[2].toUpperCase();
+      const hexWord = args[3].replace(/#/g, "").toUpperCase().trim();
+      
+      if (DEBUG) {
+        ChatLib.chat("§b[Debug] Parsed - word: '" + word + "', hexWord: '" + hexWord + "'");
+      }
+      
+      if (!/^[0-9A-F]+$/.test(hexWord)) {
+        ChatLib.chat("§a[Seymour Analyzer] §cWord must only contain 0-9 and A-F!");
+        return;
+      }
+      
+      if (hexWord.length < 1 || hexWord.length > 6) {
+        ChatLib.chat("§a[Seymour Analyzer] §cWord must be 1-6 characters long!");
+        return;
+      }
+      
+      wordList[word] = hexWord;
+      wordList.save();
+      
+      clearAllCaches();
+      
+      ChatLib.chat("§a[Seymour Analyzer] §7Added word: §d" + word + " §7(matches hex containing: §f" + hexWord + "§7)");
       return;
     }
     
-    // Store the hex word directly (no patterns)
-    wordList[word] = hexWord;
-    wordList.save();
-    
-    itemCache.clear();
-    const cacheKeys = Object.keys(hexAnalysisCache);
-    for (let i = 0; i < cacheKeys.length; i++) {
-      delete hexAnalysisCache[cacheKeys[i]];
+    if (arg2.toLowerCase() === "remove") {
+      if (!args[2]) {
+        ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour word remove <word>");
+        return;
+      }
+      
+      const word = args[2].toUpperCase();
+      
+      if (!wordList[word]) {
+        ChatLib.chat("§a[Seymour Analyzer] §cWord not found: §f" + word);
+        return;
+      }
+      
+      const pattern = wordList[word];
+      delete wordList[word];
+      wordList.save();
+      
+      clearAllCaches();
+      
+      ChatLib.chat("§a[Seymour Analyzer] §7Removed word: §d" + word + " §7(" + pattern + ")");
+      return;
     }
-    const wordCacheKeys = Object.keys(wordMatchCache);
-    for (let i = 0; i < wordCacheKeys.length; i++) {
-      delete wordMatchCache[wordCacheKeys[i]];
+    
+    if (arg2.toLowerCase() === "list") {
+      const words = Object.keys(wordList);
+      
+      if (words.length === 0) {
+        ChatLib.chat("§a[Seymour Analyzer] §7No words added yet!");
+        return;
+      }
+      
+      ChatLib.chat("§8§m----------------------------------------------------");
+      ChatLib.chat("§a§l[Seymour Analyzer] §7- Word List (§e" + words.length + "§7)");
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        const hexWord = wordList[word];
+        ChatLib.chat("  §d" + word + " §7→ §f" + hexWord);
+      }
+      ChatLib.chat("§8§m----------------------------------------------------");
+      return;
     }
     
-    ChatLib.chat("§a[Seymour Analyzer] §7Added word: §d" + word + " §7(matches hex containing: §f" + hexWord + "§7)");
+    ChatLib.chat("§a[Seymour Analyzer] §cInvalid subcommand!");
     return;
   }
-  
-  if (arg2.toLowerCase() === "remove") {
-    if (!args[2]) {
-      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour word remove <word>");
-      return;
-    }
-    
-    const word = args[2].toUpperCase();
-    
-    if (!wordList[word]) {
-      ChatLib.chat("§a[Seymour Analyzer] §cWord not found: §f" + word);
-      return;
-    }
-    
-    const pattern = wordList[word];
-    delete wordList[word];
-    wordList.save();
-    
-    itemCache.clear();
-    const cacheKeys = Object.keys(hexAnalysisCache);
-    for (let i = 0; i < cacheKeys.length; i++) {
-      delete hexAnalysisCache[cacheKeys[i]];
-    }
-    const wordCacheKeys = Object.keys(wordMatchCache);
-    for (let i = 0; i < wordCacheKeys.length; i++) {
-      delete wordMatchCache[wordCacheKeys[i]];
-    }
-    
-    ChatLib.chat("§a[Seymour Analyzer] §7Removed word: §d" + word + " §7(" + pattern + ")");
-    return;
-  }
-  
-  if (arg2.toLowerCase() === "list") {
-    const words = Object.keys(wordList);
-    
-    if (words.length === 0) {
-      ChatLib.chat("§a[Seymour Analyzer] §7No words added yet!");
-      return;
-    }
-    
-    ChatLib.chat("§8§m----------------------------------------------------");
-    ChatLib.chat("§a§l[Seymour Analyzer] §7- Word List (§e" + words.length + "§7)");
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      const hexWord = wordList[word];
-      ChatLib.chat("  §d" + word + " §7→ §f" + hexWord);
-    }
-    ChatLib.chat("§8§m----------------------------------------------------");
-    return;
-  }
-  
-  ChatLib.chat("§a[Seymour Analyzer] §cInvalid subcommand!");
-  return;
-}
 
   // Handle list subcommand
   if (arg1 && arg1.toLowerCase() === "list") {
@@ -2033,11 +1892,7 @@ if (arg1 && arg1.toLowerCase() === "word") {
       data.infoBoxEnabled = !data.infoBoxEnabled;
       data.save();
       
-      if (data.infoBoxEnabled) {
-        ChatLib.chat("§a[Seymour Analyzer] §7Info box §aenabled§7!");
-      } else {
-        ChatLib.chat("§a[Seymour Analyzer] §7Info box §cdisabled§7!");
-      }
+      ChatLib.chat("§a[Seymour Analyzer] §7Info box " + (data.infoBoxEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
     } else if (arg2 && arg2.toLowerCase() === "highlights") {
       data.highlightsEnabled = !data.highlightsEnabled;
@@ -2046,62 +1901,31 @@ if (arg1 && arg1.toLowerCase() === "word") {
       itemCache.clear();
       hoveredItemData = null;
       
-      if (data.highlightsEnabled) {
-        ChatLib.chat("§a[Seymour Analyzer] §7Item highlights §aenabled§7!");
-      } else {
-        ChatLib.chat("§a[Seymour Analyzer] §7Item highlights §cdisabled§7!");
-      }
+      ChatLib.chat("§a[Seymour Analyzer] §7Item highlights " + (data.highlightsEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
     } else if (arg2 && arg2.toLowerCase() === "sets") {
       data.pieceSpecificEnabled = !data.pieceSpecificEnabled;
       data.save();
       
-      itemCache.clear();
-      const keys = Object.keys(hexAnalysisCache);
-      for (let i = 0; i < keys.length; i++) {
-        delete hexAnalysisCache[keys[i]];
-      }
-      hoveredItemData = null;
+      clearAllCaches();
       
-      if (data.pieceSpecificEnabled) {
-        ChatLib.chat("§a[Seymour Analyzer] §7Piece-specific matching §aenabled§7! (Colors only match their piece types)");
-      } else {
-        ChatLib.chat("§a[Seymour Analyzer] §7Piece-specific matching §cdisabled§7! (Universal matching)");
-      }
+      ChatLib.chat("§a[Seymour Analyzer] §7Piece-specific matching " + (data.pieceSpecificEnabled ? "§aenabled§7! (Colors only match their piece types)" : "§cdisabled§7! (Universal matching)"));
       return;
     } else if (arg2 && arg2.toLowerCase() === "fade") {
       data.fadeDyesEnabled = !data.fadeDyesEnabled;
       data.save();
       
-      itemCache.clear();
-      const keys = Object.keys(hexAnalysisCache);
-      for (let i = 0; i < keys.length; i++) {
-        delete hexAnalysisCache[keys[i]];
-      }
-      hoveredItemData = null;
+      clearAllCaches();
       
-      if (data.fadeDyesEnabled) {
-        ChatLib.chat("§a[Seymour Analyzer] §7Fade dyes §aenabled§7!");
-      } else {
-        ChatLib.chat("§a[Seymour Analyzer] §7Fade dyes §cdisabled§7!");
-      }
+      ChatLib.chat("§a[Seymour Analyzer] §7Fade dyes " + (data.fadeDyesEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
     } else if (arg2 && arg2.toLowerCase() === "3p") {
       data.threePieceSetsEnabled = !data.threePieceSetsEnabled;
       data.save();
       
-      itemCache.clear();
-      const keys = Object.keys(hexAnalysisCache);
-      for (let i = 0; i < keys.length; i++) {
-        delete hexAnalysisCache[keys[i]];
-      }
-      hoveredItemData = null; // Clear when GUI closes
+      clearAllCaches();
       
-      if (data.threePieceSetsEnabled) {
-        ChatLib.chat("§a[Seymour Analyzer] §73-piece sets filter §aenabled§7! (Top Hats won't match 3p sets)");
-      } else {
-        ChatLib.chat("§a[Seymour Analyzer] §73-piece sets filter §cdisabled§7! (Top Hats can match 3p sets)");
-      }
+      ChatLib.chat("§a[Seymour Analyzer] §73-piece sets filter " + (data.threePieceSetsEnabled ? "§aenabled§7! (Top Hats won't match 3p sets)" : "§cdisabled§7! (Top Hats can match 3p sets)"));
       return;
     } else if (arg2 && arg2.toLowerCase() === "words") {
       data.wordsEnabled = !data.wordsEnabled;
@@ -2110,11 +1934,7 @@ if (arg1 && arg1.toLowerCase() === "word") {
       itemCache.clear();
       hoveredItemData = null;
       
-      if (data.wordsEnabled) {
-        ChatLib.chat("§a[Seymour Analyzer] §7Word highlights §aenabled§7!");
-      } else {
-        ChatLib.chat("§a[Seymour Analyzer] §7Word highlights §cdisabled§7!");
-      }
+      ChatLib.chat("§a[Seymour Analyzer] §7Word highlights " + (data.wordsEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
     } else if (arg2 && arg2.toLowerCase() === "pattern") {
       data.patternsEnabled = !data.patternsEnabled;
@@ -2123,16 +1943,21 @@ if (arg1 && arg1.toLowerCase() === "word") {
       itemCache.clear();
       hoveredItemData = null;
       
-      if (data.patternsEnabled) {
-        ChatLib.chat("§a[Seymour Analyzer] §7Pattern highlights §aenabled§7!");
-      } else {
-        ChatLib.chat("§a[Seymour Analyzer] §7Pattern highlights §cdisabled§7!");
-      }
+      ChatLib.chat("§a[Seymour Analyzer] §7Pattern highlights " + (data.patternsEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
     } else {
-      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour toggle <infobox|highlights|fade|3p|sets|words>");
+      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour toggle <infobox|highlights|fade|3p|sets|words|pattern>");
       return;
     }
+  }
+  
+  // Handle resetpos subcommand
+  if (arg1 && arg1.toLowerCase() === "resetpos") {
+    boxPosition.x = 50;
+    boxPosition.y = 80;
+    saveBoxPosition();
+    ChatLib.chat("§a[Seymour Analyzer] §7Info box position reset!");
+    return;
   }
   
   // Show help menu (default)
@@ -2167,7 +1992,7 @@ if (arg1 && arg1.toLowerCase() === "word") {
   }
 }).setName("seymour");
 
-// ===== SEARCH AND HIGHLIGHT CHESTS (FIXED) =====
+// ===== SEARCH AND HIGHLIGHT CHESTS =====
 function searchForHexes(hexes) {
   highlightedChests = [];
   const foundPieces = [];
