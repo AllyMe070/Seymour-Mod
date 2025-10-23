@@ -18,7 +18,8 @@ const data = new PogObject("SeymourAnalyzer", {
   highlightsEnabled: true,
   infoBoxEnabled: true,
   wordsEnabled: true,
-  patternsEnabled: true
+  patternsEnabled: true,
+  customColorsEnabled: true
 });
 
 const collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
@@ -308,8 +309,21 @@ function colorMatchesPieceType(colorName, pieceType) {
   return false;
 }
 
+// Check if a color is a custom color
+function isCustomColor(colorName) {
+  return customColors[colorName] !== undefined;
+}
+
 // Get priority score for sorting (lower = higher priority)
-function getPriorityScore(isFade, tier) {
+function getPriorityScore(isFade, tier, isCustom) {
+  // Custom colors have HIGHEST priority (even above T1<)
+  if (isCustom) {
+    if (tier === 0) return -3;  // Highest priority
+    if (tier === 1) return -2;
+    if (tier === 2) return -1;
+    return 6;
+  }
+  
   if (isFade) {
     if (tier === 0) return 3;
     if (tier === 1) return 4;
@@ -461,8 +475,11 @@ function analyzeSeymourArmor(itemHex, itemName) {
     const matches = [];
     const itemLab = hexToLab(itemHex);
     
-    // Combine built-in and custom colors
-    const allColorNames = Object.keys(TARGET_COLORS).concat(Object.keys(customColors));
+    // Combine built-in colors and optionally custom colors
+    let allColorNames = Object.keys(TARGET_COLORS);
+    if (data.customColorsEnabled) {
+      allColorNames = allColorNames.concat(Object.keys(customColors));
+    }
     
     for (let i = 0; i < allColorNames.length; i++) {
       const name = allColorNames[i];
@@ -486,14 +503,16 @@ function analyzeSeymourArmor(itemHex, itemName) {
       try {
         const deltaE = calculateDeltaEWithLab(itemLab, targetLab);
         const isFade = isFadeDye(name);
+        const isCustom = isCustomColor(name);
         const tier = deltaE <= 1.0 ? 0 : (deltaE <= 2.0 ? 1 : (deltaE <= 5.0 ? 2 : 3));
-        const priority = getPriorityScore(isFade, tier);
+        const priority = getPriorityScore(isFade, tier, isCustom);
         
         matches.push({
           name: name,
           targetHex: targetHex,
           deltaE: deltaE,
           isFade: isFade,
+          isCustom: isCustom,
           tier: tier,
           priority: priority
         });
@@ -536,6 +555,7 @@ function getCacheDataFromCollection(uuid) {
   
   const stored = collection[uuid];
   const isFadeColor = isFadeDye(stored.bestMatch.colorName);
+  const isCustom = isCustomColor(stored.bestMatch.colorName);
   const wordMatch = (data.wordsEnabled && stored.wordMatch) ? { word: stored.wordMatch, pattern: stored.hexcode } : null;
   const specialPattern = (data.patternsEnabled && stored.specialPattern) ? { type: stored.specialPattern, pattern: stored.hexcode } : null;
   const fullAnalysis = analyzeSeymourArmor(stored.hexcode, "");
@@ -543,6 +563,7 @@ function getCacheDataFromCollection(uuid) {
   return {
     tier: stored.bestMatch.tier,
     isFade: isFadeColor,
+    isCustom: isCustom,
     alreadyProcessed: true,
     analysis: {
       bestMatch: {
@@ -550,8 +571,9 @@ function getCacheDataFromCollection(uuid) {
         targetHex: stored.bestMatch.targetHex,
         deltaE: stored.bestMatch.deltaE,
         isFade: isFadeColor,
+        isCustom: isCustom,
         tier: stored.bestMatch.tier,
-        priority: getPriorityScore(isFadeColor, stored.bestMatch.tier)
+        priority: getPriorityScore(isFadeColor, stored.bestMatch.tier, isCustom)
       },
       top3Matches: fullAnalysis ? fullAnalysis.top3Matches : [],
       tier: stored.bestMatch.tier,
@@ -583,6 +605,7 @@ function setHoveredItemData(cacheData) {
     absoluteDist: absoluteDist,
     tier: cacheData.tier,
     isFadeDye: cacheData.isFade,
+    isCustom: cacheData.isCustom || false,
     itemHex: cacheData.itemHex,
     top3: cacheData.analysis.top3Matches,
     wordMatch: cacheData.wordMatch,
@@ -820,6 +843,7 @@ function precacheChestItems() {
       const cacheEntry = { 
         tier: analysis.tier, 
         isFade: analysis.isFadeDye,
+        isCustom: analysis.bestMatch.isCustom,
         analysis: analysis,
         itemHex: itemData.hex,
         wordMatch: wordMatch,
@@ -966,7 +990,20 @@ register('renderItemIntoGui', function(item, x, y) {
     } else if (currentSpecialPattern) {
       Renderer.drawRect(Renderer.color(147, 51, 234, 150), x, y, 16, 16);
     } else if (cacheData.tier !== 3) {
-      if (cacheData.isFade) {
+      // Check if it's CURRENTLY a custom color (not just cached)
+      const isCurrentlyCustom = cacheData.analysis && cacheData.analysis.bestMatch && 
+                                isCustomColor(cacheData.analysis.bestMatch.name);
+      
+      if (isCurrentlyCustom || cacheData.isCustom) {
+        // Custom colors: Dark green (T1) and Olive green (T2)
+        if (cacheData.tier === 0) {
+          Renderer.drawRect(Renderer.color(0, 100, 0, 150), x, y, 16, 16); // Dark green
+        } else if (cacheData.tier === 1) {
+          Renderer.drawRect(Renderer.color(85, 107, 47, 150), x, y, 16, 16); // Olive/dark olive green
+        } else if (cacheData.tier === 2) {
+          Renderer.drawRect(Renderer.color(128, 128, 0, 120), x, y, 16, 16); // Olive (yellow-green)
+        }
+      } else if (cacheData.isFade) {
         if (cacheData.tier === 0) {
           Renderer.drawRect(Renderer.color(0, 0, 255, 120), x, y, 16, 16);
         } else if (cacheData.tier === 1) {
@@ -1024,12 +1061,16 @@ register("itemTooltip", function(lore, item, event) {
         const analysis = analyzeSeymourArmor(hex, itemName);
         if (!analysis) return;
         
-        const specialPattern = matchesSpecialPattern(hex);
+        const wordMatch = data.wordsEnabled ? matchesWordPattern(hex) : null;
+        const specialPattern = data.patternsEnabled ? matchesSpecialPattern(hex) : null;
+        
         cacheData = { 
           tier: analysis.tier, 
           isFade: analysis.isFadeDye,
+          isCustom: analysis.bestMatch.isCustom,
           analysis: analysis,
           itemHex: hex,
+          wordMatch: wordMatch,
           specialPattern: specialPattern
         };
         itemCache.put(stack, cacheData);
@@ -1132,15 +1173,16 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
             if (hex) {
               const analysis = analyzeSeymourArmor(hex, itemName);
               if (analysis) {
-                const uuid = extractUuidFromItem(foundItem);
-                const wordMatch = (uuid && collection[uuid]) ? collection[uuid].wordMatch : null;
+                const wordMatch = data.wordsEnabled ? matchesWordPattern(hex) : null;
+                const specialPattern = data.patternsEnabled ? matchesSpecialPattern(hex) : null;
                 
                 cacheData = { 
                   tier: analysis.tier, 
                   isFade: analysis.isFadeDye,
                   analysis: analysis,
                   itemHex: hex,
-                  wordMatch: wordMatch
+                  wordMatch: wordMatch,
+                  specialPattern: specialPattern
                 };
                 itemCache.put(stack, cacheData);
               }
@@ -1228,7 +1270,18 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
     Renderer.drawRect(Renderer.color(0, 0, 0, bgAlpha), boxX, boxY, boxWidth, boxHeight);
     
     let borderColor;
-    if (infoData.isFadeDye) {
+    if (infoData.isCustom) {
+      // Custom color borders
+      if (infoData.tier === 0) {
+        borderColor = Renderer.color(0, 150, 0, 255); // Bright dark green
+      } else if (infoData.tier === 1) {
+        borderColor = Renderer.color(107, 142, 35, 255); // Olive drab
+      } else if (infoData.tier === 2) {
+        borderColor = Renderer.color(154, 205, 50, 255); // Yellow green
+      } else {
+        borderColor = Renderer.color(128, 128, 128, 255);
+      }
+    } else if (infoData.isFadeDye) {
       if (infoData.tier === 0) {
         borderColor = Renderer.color(0, 0, 255, 255);
       } else if (infoData.tier === 1) {
@@ -1283,7 +1336,9 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
         const yPos = boxY + currentYOffset + 12 + (i * 25);
         
         let colorPrefix;
-        if (match.isFade) {
+        if (match.isCustom) {
+          colorPrefix = match.tier === 0 ? "§2" : (match.tier === 1 ? "§a" : (match.tier === 2 ? "§e" : "§7"));
+        } else if (match.isFade) {
           colorPrefix = match.tier === 0 ? "§9" : (match.tier === 1 ? "§b" : (match.tier === 2 ? "§e" : "§7"));
         } else {
           colorPrefix = match.tier === 0 ? "§c" : (match.tier === 1 ? "§d" : (match.tier === 2 ? "§6" : "§7"));
@@ -1297,7 +1352,9 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
       Renderer.drawStringWithShadow("§7Target: §7#" + infoData.hex, boxX + 5, boxY + currentYOffset + 10);
       
       let deltaColorPrefix;
-      if (infoData.isFadeDye) {
+      if (infoData.isCustom) {
+        deltaColorPrefix = infoData.tier === 0 ? "§2" : (infoData.tier === 1 ? "§a" : (infoData.tier === 2 ? "§e" : "§7"));
+      } else if (infoData.isFadeDye) {
         deltaColorPrefix = infoData.tier === 0 ? "§9" : (infoData.tier === 1 ? "§b" : (infoData.tier === 2 ? "§e" : "§7"));
       } else {
         deltaColorPrefix = infoData.tier === 0 ? "§c" : (infoData.tier === 1 ? "§d" : (infoData.tier === 2 ? "§6" : "§7"));
@@ -1307,7 +1364,9 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
       Renderer.drawStringWithShadow("§7Absolute: §f" + infoData.absoluteDist, boxX + 5, boxY + currentYOffset + 30);
       
       let tierText;
-      if (infoData.isFadeDye) {
+      if (infoData.isCustom) {
+        tierText = infoData.tier === 0 || infoData.tier === 1 ? "§2§l★ CUSTOM T1" : (infoData.tier === 2 ? "§a§l★ CUSTOM T2" : "§7§l✗ T3+");
+      } else if (infoData.isFadeDye) {
         tierText = infoData.tier === 0 ? "§9§lT1<" : (infoData.tier === 1 ? "§b§lT1" : (infoData.tier === 2 ? "§e§lT2" : "§7§l✗ T3+"));
       } else {
         tierText = infoData.tier === 0 ? "§c§lT1<" : (infoData.tier === 1 ? "§d§lT1" : (infoData.tier === 2 ? "§6§lT2" : "§7§l✗ T3+"));
@@ -1594,10 +1653,12 @@ register("command", function() {
   
   // Handle rebuild subcommand
   if (arg1 && arg1.toLowerCase() === "rebuild") {
-    if (!arg2 || arg2.toLowerCase() !== "words") {
-      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour rebuild words");
+    if (!arg2) {
+      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour rebuild <words|analysis>");
       return;
     }
+    
+    if (arg2.toLowerCase() === "words") {
     
     const collectionKeys = Object.keys(collection);
     let updatedCount = 0;
@@ -1616,6 +1677,47 @@ register("command", function() {
     clearAllCaches();
     
     ChatLib.chat("§a[Seymour Analyzer] §7Rebuilt word matches for §e" + updatedCount + " §7pieces!");
+      return;
+    }
+    
+    if (arg2.toLowerCase() === "analysis") {
+    const collectionKeys = Object.keys(collection);
+    let updatedCount = 0;
+    
+    for (let i = 0; i < collectionKeys.length; i++) {
+      const uuid = collectionKeys[i];
+      const piece = collection[uuid];
+      if (piece && piece.hexcode && piece.pieceName) {
+        const analysis = analyzeSeymourArmor(piece.hexcode, piece.pieceName);
+        if (analysis) {
+          const best = analysis.bestMatch;
+          const itemRgb = hexToRgb(piece.hexcode);
+          const targetRgb = hexToRgb(best.targetHex);
+          const absoluteDist = Math.abs(itemRgb.r - targetRgb.r) + 
+                               Math.abs(itemRgb.g - targetRgb.g) + 
+                               Math.abs(itemRgb.b - targetRgb.b);
+          
+          piece.bestMatch = {
+            colorName: best.name,
+            targetHex: best.targetHex,
+            deltaE: best.deltaE,
+            absoluteDistance: absoluteDist,
+            tier: analysis.tier
+          };
+          updatedCount++;
+        }
+      }
+    }
+    
+    collection.save();
+    clearAllCaches();
+    
+    ChatLib.chat("§a[Seymour Analyzer] §7Rebuilt analysis for §e" + updatedCount + " §7pieces!");
+      ChatLib.chat("§7This applied current toggle settings (fade/3p/sets/custom)");
+      return;
+    }
+    
+    ChatLib.chat("§a[Seymour Analyzer] §cInvalid rebuild option! Use 'words' or 'analysis'");
     return;
   }
 
@@ -1945,8 +2047,16 @@ register("command", function() {
       
       ChatLib.chat("§a[Seymour Analyzer] §7Pattern highlights " + (data.patternsEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
+    } else if (arg2 && arg2.toLowerCase() === "custom") {
+      data.customColorsEnabled = !data.customColorsEnabled;
+      data.save();
+      
+      clearAllCaches();
+      
+      ChatLib.chat("§a[Seymour Analyzer] §7Custom colors " + (data.customColorsEnabled ? "§aenabled" : "§cdisabled") + "§7!");
+      return;
     } else {
-      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour toggle <infobox|highlights|fade|3p|sets|words|pattern>");
+      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour toggle <infobox|highlights|fade|3p|sets|words|pattern|custom>");
       return;
     }
   }
@@ -1966,10 +2076,10 @@ register("command", function() {
   ChatLib.chat("§e/seymour §7- Show this help menu");
   ChatLib.chat("§e/seymour scan start §7- Start scanning pieces");
   ChatLib.chat("§e/seymour scan stop §7- Stop scanning pieces");
+  ChatLib.chat("§e/seymour rebuild analysis §7- Rebuild all with current toggles");
   ChatLib.chat("§e/seymour search <hexes> §7- Highlight chests with hex codes");
   ChatLib.chat("§e/seymour search clear §7- Clear search highlights");
   ChatLib.chat("§e/seymour clear §7- Clear all caches & collection");
-  ChatLib.chat("§e/seymour rebuild words §7- Clears caches for words");
   ChatLib.chat("§e/seymour compare <hexes> §7- Compare multiple hex codes");
   ChatLib.chat("§e/seymour resetpos §7- Reset info box position");
   ChatLib.chat("§e/seymour add <name> <hex> §7- Add custom color");
@@ -1978,6 +2088,7 @@ register("command", function() {
   ChatLib.chat("§e/seymour word add <word> <pattern> §7- Add word pattern");
   ChatLib.chat("§e/seymour word remove <word> §7- Remove word pattern");
   ChatLib.chat("§e/seymour word list §7- List all word patterns");
+  ChatLib.chat("§e/seymour rebuild words §7- Clears caches for words");
   ChatLib.chat("§e/seymour toggle infobox §7- Toggle info box §8[" + (data.infoBoxEnabled ? "§a✓" : "§c✗") + "§8]");
   ChatLib.chat("§e/seymour toggle highlights §7- Toggle item highlights §8[" + (data.highlightsEnabled ? "§a✓" : "§c✗") + "§8]");
   ChatLib.chat("§e/seymour toggle fade §7- Toggle fade dyes §8[" + (data.fadeDyesEnabled ? "§a✓" : "§c✗") + "§8]");
@@ -1985,6 +2096,7 @@ register("command", function() {
   ChatLib.chat("§e/seymour toggle sets §7- Toggle piece-specific matching §8[" + (data.pieceSpecificEnabled ? "§a✓" : "§c✗") + "§8]");
   ChatLib.chat("§e/seymour toggle words §7- Toggle word highlights §8[" + (data.wordsEnabled ? "§a✓" : "§c✗") + "§8]");
   ChatLib.chat("§e/seymour toggle pattern §7- Toggle pattern highlights §8[" + (data.patternsEnabled ? "§a✓" : "§c✗") + "§8]");
+  ChatLib.chat("§e/seymour toggle custom §7- Toggle custom colors §8[" + (data.customColorsEnabled ? "§a✓" : "§c✗") + "§8]");
   ChatLib.chat("§7Collection: §e" + Object.keys(collection).length + " §7pieces");
   ChatLib.chat("§8§m----------------------------------------------------");
   } finally {
