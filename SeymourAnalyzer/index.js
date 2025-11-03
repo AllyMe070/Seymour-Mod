@@ -4,6 +4,34 @@
 // Import color database
 import { TARGET_COLORS, FADE_DYES } from "./colorDatabase";
 
+// Import GUIs
+import { DatabaseGUI } from "./gui/databaseGUI";
+import { ArmorChecklistGUI } from "./gui/ArmorChecklistGUI";
+import { BestSetsGUI } from "./gui/BestSetsGUI";
+import { WordMatchesGUI } from "./gui/WordMatchesGUI";
+import { PatternMatchesGUI } from "./gui/PatternMatchesGUI";
+
+global.pendingDatabaseHexSearch = null;
+
+// Performance tracking
+let perfLog = [];
+
+function logPerf(label) {
+  perfLog.push({ label: label, time: Date.now() });
+}
+
+function printPerf() {
+  if (perfLog.length < 2) return;
+  
+  ChatLib.chat("§e=== Performance Log ===");
+  for (let i = 1; i < perfLog.length; i++) {
+    const diff = perfLog[i].time - perfLog[i-1].time;
+    ChatLib.chat("§7" + perfLog[i].label + ": §c" + diff + "ms");
+  }
+  ChatLib.chat("§7Total: §c" + (perfLog[perfLog.length-1].time - perfLog[0].time) + "ms");
+  perfLog = [];
+}
+
 // ===== CONFIG =====
 const DEBUG = false;
 
@@ -19,12 +47,223 @@ const data = new PogObject("SeymourAnalyzer", {
   infoBoxEnabled: true,
   wordsEnabled: true,
   patternsEnabled: true,
-  customColorsEnabled: true
+  customColorsEnabled: true,
+  dupesEnabled: true
 });
 
 const collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
+
+// Force reload collection from disk WITHOUT FileLib
+try {
+  const File = Java.type("java.io.File");
+  const FileReader = Java.type("java.io.FileReader");
+  const BufferedReader = Java.type("java.io.BufferedReader");
+  
+  const collectionFile = new File("config/ChatTriggers/modules/SeymourAnalyzer/Collection.json");
+  
+  if (collectionFile.exists()) {
+    const reader = new BufferedReader(new FileReader(collectionFile));
+    let line;
+    let jsonString = "";
+    
+    while ((line = reader.readLine()) !== null) {
+      jsonString += line;
+    }
+    reader.close();
+    
+    if (jsonString) {
+      const parsed = JSON.parse(jsonString);
+      
+      // Clear existing collection data
+      for (const key in collection) {
+        if (collection.hasOwnProperty(key) && key !== "save" && key !== "_data") {
+          delete collection[key];
+        }
+      }
+      
+      // Load fresh data with deep copy to avoid reference issues
+      for (const key in parsed) {
+        if (parsed.hasOwnProperty(key)) {
+          const piece = parsed[key];
+          // Deep copy the piece to avoid any reference issues
+          collection[key] = {
+            pieceName: piece.pieceName,
+            uuid: piece.uuid,
+            hexcode: piece.hexcode,
+            specialPattern: piece.specialPattern,
+            bestMatch: piece.bestMatch ? {
+              colorName: piece.bestMatch.colorName,
+              targetHex: piece.bestMatch.targetHex,
+              deltaE: piece.bestMatch.deltaE,
+              absoluteDistance: piece.bestMatch.absoluteDistance,
+              tier: piece.bestMatch.tier
+            } : null,
+            allMatches: piece.allMatches ? piece.allMatches.map(function(m) {
+              return {
+                colorName: m.colorName,
+                targetHex: m.targetHex,
+                deltaE: m.deltaE,
+                absoluteDistance: m.absoluteDistance,
+                tier: m.tier
+              };
+            }) : [],
+            wordMatch: piece.wordMatch,
+            chestLocation: piece.chestLocation,
+            timestamp: piece.timestamp
+          };
+        }
+      }
+      
+      // ChatLib.chat("§a[Seymour] Reloaded " + Object.keys(parsed).length + " pieces from disk");
+    }
+  }
+} catch (e) {
+  ChatLib.chat("§c[Seymour] Failed to reload collection: " + e);
+}
 const customColors = new PogObject("SeymourAnalyzer", {}, "CustomColors.json");
 const wordList = new PogObject("SeymourAnalyzer", {}, "Words.json");
+
+// UUID cache for fast lookups - MOVED HERE so we can populate it early
+const uuidCache = {};
+
+// PRE-POPULATE uuidCache from collection at startup (this makes scanned chests instant!)
+setTimeout(function() {
+  try {
+    const collectionKeys = Object.keys(collection);
+    let cachedCount = 0;
+    
+    for (let i = 0; i < collectionKeys.length; i++) {
+      const uuid = collectionKeys[i];
+      const piece = collection[uuid];
+      
+      if (!piece || !piece.bestMatch || !piece.hexcode) continue;
+      
+      // Check if it's a fade dye
+      let isFadeColor = false;
+      for (let f = 0; f < FADE_DYES.length; f++) {
+        if (piece.bestMatch.colorName.indexOf(FADE_DYES[f] + " - Stage") === 0) {
+          isFadeColor = true;
+          break;
+        }
+      }
+      
+      // Check if it's a custom color
+      const isCustom = customColors[piece.bestMatch.colorName] !== undefined;
+      
+      // Build top3Matches from stored allMatches
+      const top3Matches = [];
+      if (piece.allMatches && piece.allMatches.length > 0) {
+        const matchesArray = piece.allMatches;
+        
+        // Process match 0
+        if (matchesArray.length > 0) {
+          const match0 = matchesArray[0];
+          const colorName0 = match0.colorName;
+          const matchIsFade0 = isFadeDye(colorName0);
+          const matchIsCustom0 = isCustomColor(colorName0);
+          
+          top3Matches.push({
+            name: colorName0,
+            targetHex: match0.targetHex,
+            deltaE: match0.deltaE,
+            isFade: matchIsFade0,
+            isCustom: matchIsCustom0,
+            tier: match0.tier,
+            priority: getPriorityScore(matchIsFade0, match0.tier, matchIsCustom0)
+          });
+        }
+        
+        // Process match 1
+        if (matchesArray.length > 1) {
+          const match1 = matchesArray[1];
+          const colorName1 = match1.colorName;
+          const matchIsFade1 = isFadeDye(colorName1);
+          const matchIsCustom1 = isCustomColor(colorName1);
+          
+          top3Matches.push({
+            name: colorName1,
+            targetHex: match1.targetHex,
+            deltaE: match1.deltaE,
+            isFade: matchIsFade1,
+            isCustom: matchIsCustom1,
+            tier: match1.tier,
+            priority: getPriorityScore(matchIsFade1, match1.tier, matchIsCustom1)
+          });
+        }
+        
+        // Process match 2
+        if (matchesArray.length > 2) {
+          const match2 = matchesArray[2];
+          const colorName2 = match2.colorName;
+          const matchIsFade2 = isFadeDye(colorName2);
+          const matchIsCustom2 = isCustomColor(colorName2);
+          
+          top3Matches.push({
+            name: colorName2,
+            targetHex: match2.targetHex,
+            deltaE: match2.deltaE,
+            isFade: matchIsFade2,
+            isCustom: matchIsCustom2,
+            tier: match2.tier,
+            priority: getPriorityScore(matchIsFade2, match2.tier, matchIsCustom2)
+          });
+        }
+      }
+      
+      // If we don't have stored matches, at least include the best match
+      if (top3Matches.length === 0) {
+        const bestIsFade = isFadeDye(piece.bestMatch.colorName);
+        const bestIsCustom = isCustomColor(piece.bestMatch.colorName);
+        top3Matches.push({
+          name: piece.bestMatch.colorName,
+          targetHex: piece.bestMatch.targetHex,
+          deltaE: piece.bestMatch.deltaE,
+          isFade: bestIsFade,
+          isCustom: bestIsCustom,
+          tier: piece.bestMatch.tier,
+          priority: getPriorityScore(bestIsFade, piece.bestMatch.tier, bestIsCustom)
+        });
+      }
+      
+      // Pre-build the cache entry with ALL necessary flags INCLUDING top3Matches
+      uuidCache[uuid] = {
+        tier: piece.bestMatch.tier,
+        isFade: isFadeColor,
+        isCustom: isCustom,
+        alreadyProcessed: true,
+        collectionUuid: uuid,
+        itemHex: piece.hexcode,
+        wordMatch: piece.wordMatch ? { word: piece.wordMatch, pattern: piece.hexcode } : null,
+        specialPattern: piece.specialPattern ? { type: piece.specialPattern, pattern: piece.hexcode } : null,
+        // Pre-calculate highlight states (will be updated when needed)
+        isSearchMatch: false,
+        isDupe: false,
+        // Store FULL analysis data including top3Matches
+        analysis: {
+          bestMatch: {
+            name: piece.bestMatch.colorName,
+            targetHex: piece.bestMatch.targetHex,
+            deltaE: piece.bestMatch.deltaE,
+            isFade: isFadeColor,
+            isCustom: isCustom,
+            tier: piece.bestMatch.tier
+          },
+          top3Matches: top3Matches,
+          tier: piece.bestMatch.tier,
+          isFadeDye: isFadeColor
+        }
+      };
+      
+      cachedCount++;
+    }
+    
+    if (cachedCount > 0) {
+      ChatLib.chat("§a[Seymour] Pre-cached §e" + cachedCount + "§a pieces for instant loading!");
+    }
+  } catch (e) {
+    ChatLib.chat("§c[Seymour] Failed to pre-cache: " + e);
+  }
+}, 500);
 
 let scanningEnabled = false;
 
@@ -119,7 +358,7 @@ function rebuildLabCache() {
     }
   }
   
-  ChatLib.chat("§a[Seymour Analyzer] §7Initialized " + Object.keys(TARGET_COLORS_LAB).length + " color LAB values (" + customColorNames.length + " custom)");
+  // ChatLib.chat("§a[Seymour Analyzer] §7Initialized " + Object.keys(TARGET_COLORS_LAB).length + " color LAB values (" + customColorNames.length + " custom)");
 }
 
 rebuildLabCache();
@@ -558,13 +797,89 @@ function getCacheDataFromCollection(uuid) {
   const isCustom = isCustomColor(stored.bestMatch.colorName);
   const wordMatch = (data.wordsEnabled && stored.wordMatch) ? { word: stored.wordMatch, pattern: stored.hexcode } : null;
   const specialPattern = (data.patternsEnabled && stored.specialPattern) ? { type: stored.specialPattern, pattern: stored.hexcode } : null;
-  const fullAnalysis = analyzeSeymourArmor(stored.hexcode, "");
+  
+  // Build top3Matches from stored allMatches
+  const top3Matches = [];
+  if (stored.allMatches && stored.allMatches.length > 0) {
+    // FIXED: Manually access each index to avoid loop variable caching bug
+    const matchesArray = stored.allMatches;
+    
+    // Process match 0
+    if (matchesArray.length > 0) {
+      const match0 = matchesArray[0];
+      const colorName0 = match0.colorName;
+      const matchIsFade0 = isFadeDye(colorName0);
+      const matchIsCustom0 = isCustomColor(colorName0);
+      
+      top3Matches.push({
+        name: colorName0,
+        targetHex: match0.targetHex,
+        deltaE: match0.deltaE,
+        isFade: matchIsFade0,
+        isCustom: matchIsCustom0,
+        tier: match0.tier,
+        priority: getPriorityScore(matchIsFade0, match0.tier, matchIsCustom0)
+      });
+    }
+    
+    // Process match 1
+    if (matchesArray.length > 1) {
+      const match1 = matchesArray[1];
+      const colorName1 = match1.colorName;
+      const matchIsFade1 = isFadeDye(colorName1);
+      const matchIsCustom1 = isCustomColor(colorName1);
+      
+      top3Matches.push({
+        name: colorName1,
+        targetHex: match1.targetHex,
+        deltaE: match1.deltaE,
+        isFade: matchIsFade1,
+        isCustom: matchIsCustom1,
+        tier: match1.tier,
+        priority: getPriorityScore(matchIsFade1, match1.tier, matchIsCustom1)
+      });
+    }
+    
+    // Process match 2
+    if (matchesArray.length > 2) {
+      const match2 = matchesArray[2];
+      const colorName2 = match2.colorName;
+      const matchIsFade2 = isFadeDye(colorName2);
+      const matchIsCustom2 = isCustomColor(colorName2);
+      
+      top3Matches.push({
+        name: colorName2,
+        targetHex: match2.targetHex,
+        deltaE: match2.deltaE,
+        isFade: matchIsFade2,
+        isCustom: matchIsCustom2,
+        tier: match2.tier,
+        priority: getPriorityScore(matchIsFade2, match2.tier, matchIsCustom2)
+      });
+    }
+  }
+  
+  // If we don't have stored matches, at least include the best match
+  if (top3Matches.length === 0) {
+    const bestIsFade = isFadeDye(stored.bestMatch.colorName);
+    const bestIsCustom = isCustomColor(stored.bestMatch.colorName);
+    top3Matches.push({
+      name: stored.bestMatch.colorName,
+      targetHex: stored.bestMatch.targetHex,
+      deltaE: stored.bestMatch.deltaE,
+      isFade: bestIsFade,
+      isCustom: bestIsCustom,
+      tier: stored.bestMatch.tier,
+      priority: getPriorityScore(bestIsFade, stored.bestMatch.tier, bestIsCustom)
+    });
+  }
   
   return {
     tier: stored.bestMatch.tier,
     isFade: isFadeColor,
     isCustom: isCustom,
     alreadyProcessed: true,
+    collectionUuid: uuid,
     analysis: {
       bestMatch: {
         name: stored.bestMatch.colorName,
@@ -575,7 +890,7 @@ function getCacheDataFromCollection(uuid) {
         tier: stored.bestMatch.tier,
         priority: getPriorityScore(isFadeColor, stored.bestMatch.tier, isCustom)
       },
-      top3Matches: fullAnalysis ? fullAnalysis.top3Matches : [],
+      top3Matches: top3Matches,
       tier: stored.bestMatch.tier,
       isFadeDye: isFadeColor
     },
@@ -586,8 +901,11 @@ function getCacheDataFromCollection(uuid) {
 }
 
 // ===== HELPER: SET HOVERED ITEM DATA =====
-function setHoveredItemData(cacheData) {
+function setHoveredItemData(cacheData, uuid, itemName) {
   if (!cacheData || !cacheData.analysis) return;
+  
+  // Use passed UUID, or fallback to UUID stored in cacheData (from collection)
+  const actualUuid = uuid || cacheData.collectionUuid || null;
   
   const best = cacheData.analysis.bestMatch;
   const itemRgb = hexToRgb(cacheData.itemHex);
@@ -598,6 +916,10 @@ function setHoveredItemData(cacheData) {
                        Math.abs(itemRgb.g - targetRgb.g) + 
                        Math.abs(itemRgb.b - targetRgb.b);
   
+  // PRE-CALCULATE ownership and dupe checks HERE (only once when hovering)
+  const ownedPieceData = checkIfPieceOwnedByMatch(best.name, cacheData.itemHex, cacheData.analysis.top3Matches || [], itemName);
+  const dupeData = data.dupesEnabled ? checkForDupeHex(cacheData.itemHex, actualUuid) : null;
+  
   hoveredItemData = {
     name: best.name,
     hex: best.targetHex,
@@ -607,10 +929,15 @@ function setHoveredItemData(cacheData) {
     isFadeDye: cacheData.isFade,
     isCustom: cacheData.isCustom || false,
     itemHex: cacheData.itemHex,
-    top3: cacheData.analysis.top3Matches,
+    top3: cacheData.analysis.top3Matches || [],
     wordMatch: cacheData.wordMatch,
     specialPattern: cacheData.specialPattern,
-    timestamp: Date.now()
+    uuid: actualUuid,
+    itemName: itemName || null,
+    timestamp: Date.now(),
+    // Store pre-calculated results
+    ownedPiece: ownedPieceData,
+    dupeCheck: dupeData
   };
 }
 
@@ -630,7 +957,164 @@ function clearAllCaches() {
   for (let i = 0; i < uuidKeys.length; i++) {
     delete uuidCache[uuidKeys[i]];
   }
-  hoveredItemData = null;
+  // Clear ownership cache
+const ownerKeys = Object.keys(ownershipCache);
+for (let i = 0; i < ownerKeys.length; i++) {
+  delete ownershipCache[ownerKeys[i]];
+}
+// Clear dupe hex cache
+const dupeKeys = Object.keys(dupeHexCache);
+for (let i = 0; i < dupeKeys.length; i++) {
+  delete dupeHexCache[dupeKeys[i]];
+}
+hoveredItemData = null;
+}
+
+// ===== CHECK IF PIECE IS OWNED IN COLLECTION =====
+function checkIfPieceOwnedByMatch(bestMatchName, itemHex, top3Matches, itemName) {
+  if (!bestMatchName) return null;
+  
+  // Detect the piece type of the item we're hovering over
+  const hoveredPieceType = getPieceType(itemName);
+  if (!hoveredPieceType || hoveredPieceType === "universal") return null;
+  
+  const cacheKey = bestMatchName + "|" + itemHex + "|" + hoveredPieceType;
+  
+  // Return cached result if available
+  if (ownershipCache[cacheKey] !== undefined) {
+    return ownershipCache[cacheKey];
+  }
+  
+  try {
+    // Check if this color is ACTUALLY filled in the ArmorChecklist
+    const isFade = isFadeDye(bestMatchName);
+    const cache = isFade ? armorGui.fadeDyeOptimalCache : armorGui.normalColorCache;
+    
+    if (!cache) {
+      ownershipCache[cacheKey] = null;
+      return null;
+    }
+    
+    // Find which category this color belongs to
+    let foundInCategory = null;
+    const categoryNames = Object.keys(armorGui.categories);
+    
+    for (let c = 0; c < categoryNames.length; c++) {
+      const categoryName = categoryNames[c];
+      const stages = armorGui.categories[categoryName];
+      
+      for (let s = 0; s < stages.length; s++) {
+        if (stages[s].name === bestMatchName) {
+          foundInCategory = categoryName;
+          break;
+        }
+      }
+      
+      if (foundInCategory) break;
+    }
+    
+    if (!foundInCategory || !cache[foundInCategory]) {
+      ownershipCache[cacheKey] = null;
+      return null;
+    }
+    
+    const categoryCache = cache[foundInCategory];
+    
+    // Find the target hex for this color name
+    let targetHex = null;
+    const stages = armorGui.categories[foundInCategory];
+    for (let s = 0; s < stages.length; s++) {
+      if (stages[s].name === bestMatchName) {
+        targetHex = stages[s].hex;
+        break;
+      }
+    }
+    
+    if (!targetHex || !categoryCache.matches || !categoryCache.matches[targetHex]) {
+      ownershipCache[cacheKey] = null;
+      return null;
+    }
+    
+    const matchData = categoryCache.matches[targetHex];
+    
+    // Check if THIS SPECIFIC piece type has a piece assigned
+    const pieceData = matchData[hoveredPieceType];
+    
+    if (pieceData && pieceData !== null && pieceData.deltaE !== undefined) {
+      const tier = pieceData.deltaE <= 1.0 ? 0 : (pieceData.deltaE <= 2.0 ? 1 : 2);
+      
+      const result = { tier: tier };
+      ownershipCache[cacheKey] = result;
+      return result;
+    }
+    
+    // Cache null result
+    ownershipCache[cacheKey] = null;
+  } catch (e) {
+    // Silent fail
+  }
+  
+  return null;
+}
+
+// ===== CHECK FOR DUPLICATE HEX IN COLLECTION =====
+const dupeHexCache = {};
+
+function checkForDupeHex(itemHex, itemUuid) {
+  if (!itemHex) return null;
+  
+  const hexUpper = itemHex.toUpperCase();
+  
+  // Create cache key that includes UUID to differentiate scanned vs unscanned items
+  const cacheKey = hexUpper + "|" + (itemUuid || "unscanned");
+  
+  // Return cached result if available
+  if (dupeHexCache[cacheKey] !== undefined) {
+    return dupeHexCache[cacheKey];
+  }
+  
+  try {
+    const collectionKeys = Object.keys(collection);
+    let dupeCount = 0;
+    let isThisItemInCollection = false;
+    
+    for (let i = 0; i < collectionKeys.length; i++) {
+      const uuid = collectionKeys[i];
+      const piece = collection[uuid];
+      
+      if (!piece || !piece.hexcode) continue;
+      
+      if (piece.hexcode.toUpperCase() === hexUpper) {
+        dupeCount++;
+        
+        // Check if the hovered item IS this collection piece
+        if (itemUuid && uuid === itemUuid) {
+          isThisItemInCollection = true;
+        }
+      }
+    }
+    
+    // For items IN collection: show dupe if there are 2+ pieces with this hex
+    if (isThisItemInCollection && dupeCount >= 2) {
+      const result = { count: dupeCount };
+      dupeHexCache[cacheKey] = result;
+      return result;
+    }
+    
+    // For items NOT in collection (unscanned): show dupe if there's even 1 piece with this hex
+    if (!isThisItemInCollection && dupeCount >= 1) {
+      const result = { count: dupeCount + 1 }; // +1 to include the hovered piece
+      dupeHexCache[cacheKey] = result;
+      return result;
+    }
+    
+    // Cache null result
+    dupeHexCache[cacheKey] = null;
+  } catch (e) {
+    // Silent fail
+  }
+  
+  return null;
 }
 
 // ===== SCAN CHEST CONTENTS =====
@@ -676,22 +1160,41 @@ function scanChestContents() {
       const wordMatch = matchesWordPattern(hex);
       const specialPattern = matchesSpecialPattern(hex);
       
-      collection[uuid] = {
-        pieceName: ChatLib.removeFormatting(itemName),
-        uuid: uuid,
-        hexcode: hex,
-        specialPattern: specialPattern ? specialPattern.type : null,
-        bestMatch: {
-          colorName: best.name,
-          targetHex: best.targetHex,
-          deltaE: best.deltaE,
-          absoluteDistance: absoluteDist,
-          tier: analysis.tier
-        },
-        wordMatch: wordMatch ? wordMatch.word : null,
-        chestLocation: chestLoc,
-        timestamp: Date.now()
-      };
+      // Store top 3 matches
+const top3Matches = [];
+for (let m = 0; m < 3 && m < analysis.top3Matches.length; m++) {
+  const match = analysis.top3Matches[m];
+  const matchRgb = hexToRgb(match.targetHex);
+  const matchAbsoluteDist = Math.abs(itemRgb.r - matchRgb.r) + 
+                            Math.abs(itemRgb.g - matchRgb.g) + 
+                            Math.abs(itemRgb.b - matchRgb.b);
+  
+  top3Matches[m] = {
+    colorName: match.name,
+    targetHex: match.targetHex,
+    deltaE: match.deltaE,
+    absoluteDistance: matchAbsoluteDist,
+    tier: match.tier
+  };
+}
+
+collection[uuid] = {
+  pieceName: ChatLib.removeFormatting(itemName),
+  uuid: uuid,
+  hexcode: hex,
+  specialPattern: specialPattern ? specialPattern.type : null,
+  bestMatch: {
+    colorName: best.name,
+    targetHex: best.targetHex,
+    deltaE: best.deltaE,
+    absoluteDistance: absoluteDist,
+    tier: analysis.tier
+  },
+  allMatches: top3Matches,
+  wordMatch: wordMatch ? wordMatch.word : null,
+  chestLocation: chestLoc,
+  timestamp: Date.now()
+};
       
       scannedCount++;
     }
@@ -709,6 +1212,7 @@ function scanChestContents() {
 let scanTimeout = null;
 let isPrecaching = false;
 let lastGuiOpenTime = 0;
+let needsRecache = false;
 
 register("guiOpened", function() {
   const now = Date.now();
@@ -720,8 +1224,6 @@ register("guiOpened", function() {
   
   isPrecaching = true;
   precacheComplete = false;
-  
-  // Precaching will handle all items
   
   setTimeout(function() {
     precacheChestItems();
@@ -737,9 +1239,29 @@ register("guiOpened", function() {
   }, 250);
 });
 
+// Add tick handler to recache when needed
+register("tick", function() {
+  if (needsRecache && !isPrecaching) {
+    const container = Player.getContainer();
+    if (container) {
+      isPrecaching = true;
+      precacheComplete = false;
+      setTimeout(function() {
+        precacheChestItems();
+        isPrecaching = false;
+        needsRecache = false;
+      }, 20);
+    }
+  }
+});
+
 // ===== CACHE FOR ITEMS =====
-const itemCache = new (Java.type('java.util.WeakHashMap'))();
+const itemCache = new (Java.type('java.util.HashMap'))();
 let hoveredItemData = null;
+
+// Cache for ownership checks
+const ownershipCache = {};
+let lastOwnershipCacheTime = 0;
 
 // ===== SEARCH FEATURE =====
 let searchHexes = [];
@@ -768,6 +1290,9 @@ let lastChestOpenTime = 0;
 let precacheComplete = false;
 
 function precacheChestItems() {
+  perfLog = [];
+  logPerf("Start precache");
+  
   try {
     const container = Player.getContainer();
     if (!container) return;
@@ -775,24 +1300,41 @@ function precacheChestItems() {
     const items = container.getItems();
     if (!items) return;
     
-    // Determine chest size (items before inventory)
-    // Standard chest = 27 slots, Large chest = 54 slots, Ender chest = 27, etc.
-    // Player inventory starts after the chest slots
+    logPerf("Got container items");
+    
+    // FIXED: Better chest slot detection
     const containerSize = container.getSize();
-    const chestSlots = containerSize > 54 ? 54 : (containerSize > 27 ? 27 : containerSize - 36);
+    let chestSlots;
     
-    let needsAnalysis = [];
+    // Determine actual chest slots based on container type
+    if (containerSize === 90) {
+      // Large chest (54) + player inventory (36) = 90
+      chestSlots = 54;
+    } else if (containerSize === 63) {
+      // Standard chest (27) + player inventory (36) = 63
+      chestSlots = 27;
+    } else if (containerSize > 54) {
+      // Other large containers
+      chestSlots = Math.min(54, containerSize - 36);
+    } else if (containerSize > 27) {
+      // Other standard containers
+      chestSlots = Math.min(27, containerSize - 36);
+    } else {
+      // Small containers or special GUIs - process all slots
+      chestSlots = Math.max(0, containerSize - 36);
+    }
     
-    // PHASE 1: Instant checks (no analysis) - ONLY for chest slots, not inventory
-    for (let i = 0; i < items.length && i < chestSlots; i++) {
+    // Safety check: don't process more slots than exist
+    chestSlots = Math.min(chestSlots, items.length);
+    
+    let needsUuidExtraction = [];
+    
+    // PHASE 1: Ultra-fast checks - NO UUID extraction at all!
+    for (let i = 0; i < chestSlots; i++) {
       const item = items[i];
       if (!item) continue;
       
       const stack = item.itemStack;
-      if (itemCache.get(stack) !== null && itemCache.get(stack) !== undefined) {
-        continue;
-      }
-      
       const name = item.getName();
       
       if (!isSeymourArmor(name)) {
@@ -800,64 +1342,131 @@ function precacheChestItems() {
         continue;
       }
       
-      const uuid = extractUuidFromItem(item);
+      const cachedData = itemCache.get(stack);
+      if (cachedData !== null && cachedData !== undefined) {
+        continue;
+      }
+      
+      const loreRaw = item.getLore();
+      const hex = extractHexFromLore(loreRaw);
+      
+      if (!hex) {
+        itemCache.put(stack, { tier: -1, isFade: false });
+        continue;
+      }
+      
+      let foundInCache = false;
+      const hexUpper = hex.toUpperCase();
+      
+      // Search uuidCache by hex (no UUID extraction needed!)
+      const uuidKeys = Object.keys(uuidCache);
+      for (let j = 0; j < uuidKeys.length; j++) {
+        const cacheEntry = uuidCache[uuidKeys[j]];
+        if (cacheEntry && cacheEntry.itemHex && cacheEntry.itemHex.toUpperCase() === hexUpper) {
+          // ALWAYS recalculate search/dupe flags (they may have changed!)
+          cacheEntry.isSearchMatch = false;
+          if (searchHexes.length > 0) {
+            for (let s = 0; s < searchHexes.length; s++) {
+              if (hexUpper === searchHexes[s]) {
+                cacheEntry.isSearchMatch = true;
+                break;
+              }
+            }
+          }
+          
+          // Recalculate dupe flag if enabled
+          if (data.dupesEnabled) {
+            const uuid = uuidKeys[j];
+            const dupeResult = checkForDupeHex(hexUpper, uuid);
+            cacheEntry.isDupe = dupeResult ? true : false;
+          } else {
+            cacheEntry.isDupe = false;
+          }
+          
+          itemCache.put(stack, cacheEntry);
+          foundInCache = true;
+          break;
+        }
+      }
+      
+      if (foundInCache) {
+        continue;
+      }
+      
+      needsUuidExtraction.push({ item: item, stack: stack, name: name, hex: hex });
+    }
+    
+    logPerf("Phase 1 complete (found " + needsUuidExtraction.length + " items needing UUID)");
+    
+    // PHASE 2: Extract UUIDs only for items not found by hex
+    for (let i = 0; i < needsUuidExtraction.length; i++) {
+      const entry = needsUuidExtraction[i];
+      const uuid = extractUuidFromItem(entry.item);
+      
+      if (uuid && uuidCache[uuid]) {
+        itemCache.put(entry.stack, uuidCache[uuid]);
+        continue;
+      }
       
       if (uuid && collection[uuid]) {
         const cacheData = getCacheDataFromCollection(uuid);
         if (cacheData) {
-          itemCache.put(stack, cacheData);
+          itemCache.put(entry.stack, cacheData);
+          uuidCache[uuid] = cacheData;
           continue;
         }
       }
       
-      needsAnalysis.push({ item: item, stack: stack, name: name });
-    }
-    
-    // PHASE 2: Analyze remaining items
-    const loreData = [];
-    for (let i = 0; i < needsAnalysis.length; i++) {
-      const entry = needsAnalysis[i];
-      const loreRaw = entry.item.getLore();
-      const hex = extractHexFromLore(loreRaw);
-      loreData.push({ entry: entry, hex: hex });
-    }
-    
-    for (let i = 0; i < loreData.length; i++) {
-      const itemData = loreData[i];
-      
-      if (!itemData.hex) {
-        itemCache.put(itemData.entry.stack, { tier: -1, isFade: false });
-        continue;
-      }
-      
-      const analysis = analyzeSeymourArmor(itemData.hex, itemData.entry.name);
+      const analysis = analyzeSeymourArmor(entry.hex, entry.name);
       
       if (!analysis) {
-        itemCache.put(itemData.entry.stack, { tier: -1, isFade: false });
+        itemCache.put(entry.stack, { tier: -1, isFade: false });
         continue;
       }
       
-      const wordMatch = data.wordsEnabled ? matchesWordPattern(itemData.hex) : null;
-      const specialPattern = data.patternsEnabled ? matchesSpecialPattern(itemData.hex) : null;
+      const wordMatch = data.wordsEnabled ? matchesWordPattern(entry.hex) : null;
+      const specialPattern = data.patternsEnabled ? matchesSpecialPattern(entry.hex) : null;
       
       const cacheEntry = { 
         tier: analysis.tier, 
         isFade: analysis.isFadeDye,
         isCustom: analysis.bestMatch.isCustom,
         analysis: analysis,
-        itemHex: itemData.hex,
+        itemHex: entry.hex,
         wordMatch: wordMatch,
-        specialPattern: specialPattern
+        specialPattern: specialPattern,
+        // Pre-calculate highlight states
+        isSearchMatch: false,
+        isDupe: false
       };
       
-      itemCache.put(itemData.entry.stack, cacheEntry);
+      // Calculate search match
+      if (searchHexes.length > 0) {
+        const hexUpper = entry.hex.toUpperCase();
+        for (let s = 0; s < searchHexes.length; s++) {
+          if (hexUpper === searchHexes[s]) {
+            cacheEntry.isSearchMatch = true;
+            break;
+          }
+        }
+      }
       
-      // ALSO cache in UUID cache for persistent lookup
-      const uuid = extractUuidFromItem(itemData.entry.item);
+      // Calculate dupe (only if enabled and we have UUID)
+      if (data.dupesEnabled && uuid) {
+        const dupeResult = checkForDupeHex(entry.hex, uuid);
+        if (dupeResult) {
+          cacheEntry.isDupe = true;
+        }
+      }
+      
+      itemCache.put(entry.stack, cacheEntry);
+      
       if (uuid) {
         uuidCache[uuid] = cacheEntry;
       }
     }
+    
+    logPerf("Phase 2 complete");
     
     precacheComplete = true;
     
@@ -866,85 +1475,92 @@ function precacheChestItems() {
   }
 }
 
-const uuidCache = {};
-
 register('renderItemIntoGui', function(item, x, y) {
   if (!data.highlightsEnabled && !data.infoBoxEnabled) return;
-  
-  // Get UUID first to check if this is a known item
-  const uuid = extractUuidFromItem(item);
-  
-  // If precaching, only render items we already know about (inventory items)
-  if (isPrecaching || !precacheComplete) {
-    // Allow rendering of cached items (inventory) during precache
-    if (!uuid || !uuidCache[uuid]) {
-      return; // Skip unknown items during precache
-    }
-    // Continue to render known items below
-  }
   
   try {
     const name = item.getName();
     if (!isSeymourArmor(name)) return;
     
-    // UUID already extracted at the top of the function
-    // (no need to extract again)
+    const stack = item.itemStack;
     
-    // Try UUID cache first (fastest path - for inventory items)
-    let cacheData = uuid ? uuidCache[uuid] : null;
+    // Try itemCache first (from precache)
+    let cacheData = itemCache.get(stack);
     
-    // If not in UUID cache, check if it's in collection (never analyzed before)
-    if (!cacheData && uuid && collection[uuid]) {
-      cacheData = getCacheDataFromCollection(uuid);
-      if (cacheData) {
-        uuidCache[uuid] = cacheData;
-      }
-    }
-    
-    // If still not found, check itemCache (chest items from precache)
-    if (!cacheData) {
-      const stack = item.itemStack;
-      cacheData = itemCache.get(stack);
-      
-      // If found in itemCache, also add to UUID cache
-      if (cacheData && uuid) {
-        uuidCache[uuid] = cacheData;
+    // If not in itemCache, try uuidCache (for persistent items)
+    if (!cacheData || cacheData.tier === -1) {
+      const uuid = extractUuidFromItem(item);
+      if (uuid && uuidCache[uuid]) {
+        cacheData = uuidCache[uuid];
+        // Store in itemCache for next frame
+        itemCache.put(stack, cacheData);
       }
       
-      // If still nothing and NOT in precache, this is a new item - analyze it once
+      // If STILL no cache data AND not currently precaching, analyze it now
       if (!cacheData && !isPrecaching) {
-        const loreRaw = item.getLore();
-        const hex = extractHexFromLore(loreRaw);
-        if (!hex) return;
+        // Check if it's in collection first
+        if (uuid && collection[uuid]) {
+          cacheData = getCacheDataFromCollection(uuid);
+          if (cacheData) {
+            itemCache.put(stack, cacheData);
+            if (uuid) uuidCache[uuid] = cacheData;
+          }
+        }
         
-        const analysis = analyzeSeymourArmor(hex, name);
-        if (!analysis) return;
-        
-        const wordMatch = data.wordsEnabled ? matchesWordPattern(hex) : null;
-        const specialPattern = data.patternsEnabled ? matchesSpecialPattern(hex) : null;
-        
-        cacheData = { 
-          tier: analysis.tier, 
-          isFade: analysis.isFadeDye,
-          analysis: analysis,
-          itemHex: hex,
-          wordMatch: wordMatch,
-          specialPattern: specialPattern
-        };
-        
-        // Cache it by UUID so it's never analyzed again
-        if (uuid) {
-          uuidCache[uuid] = cacheData;
+        // If still nothing, do a live analysis
+        if (!cacheData) {
+          const loreRaw = item.getLore();
+          const hex = extractHexFromLore(loreRaw);
+          if (hex) {
+            const analysis = analyzeSeymourArmor(hex, name);
+            if (analysis) {
+              const wordMatch = data.wordsEnabled ? matchesWordPattern(hex) : null;
+              const specialPattern = data.patternsEnabled ? matchesSpecialPattern(hex) : null;
+              
+              cacheData = { 
+                tier: analysis.tier, 
+                isFade: analysis.isFadeDye,
+                isCustom: analysis.bestMatch.isCustom,
+                analysis: analysis,
+                itemHex: hex,
+                wordMatch: wordMatch,
+                specialPattern: specialPattern,
+                // Pre-calculate highlight states
+                isSearchMatch: false,
+                isDupe: false
+              };
+              
+              // Calculate search match
+              if (searchHexes.length > 0) {
+                const hexUpper = hex.toUpperCase();
+                for (let s = 0; s < searchHexes.length; s++) {
+                  if (hexUpper === searchHexes[s]) {
+                    cacheData.isSearchMatch = true;
+                    break;
+                  }
+                }
+              }
+              
+              // Calculate dupe (only if enabled and we have UUID)
+              if (data.dupesEnabled && uuid) {
+                const dupeResult = checkForDupeHex(hex, uuid);
+                if (dupeResult) {
+                  cacheData.isDupe = true;
+                }
+              }
+              
+              itemCache.put(stack, cacheData);
+              if (uuid) uuidCache[uuid] = cacheData;
+            }
+          }
         }
       }
     }
     
-    if (!cacheData) return;
+    // If still no cache data, skip
+    if (!cacheData || cacheData.tier === -1) return;
     
-    // Skip non-Seymour or invalid items
-    if (cacheData.tier === -1) return;
-    
-    // Handle hover for info box
+    // Handle hover for info box (only when hovering, not every frame)
     if (data.infoBoxEnabled && cacheData.analysis) {
       const Mouse = Java.type("org.lwjgl.input.Mouse");
       const mc = Client.getMinecraft();
@@ -954,13 +1570,13 @@ register('renderItemIntoGui', function(item, x, y) {
       const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
       
       if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
-        setHoveredItemData(cacheData);
-        
-        if (DEBUG) ChatLib.chat("§a[Debug] Hover at " + x + "," + y + ": " + cacheData.analysis.bestMatch.name);
+        // Only extract UUID when actually hovering
+        const uuid = extractUuidFromItem(item);
+        setHoveredItemData(cacheData, uuid, name);
       }
     }
     
-    // Draw highlights (MUST run every frame - this is normal!)
+    // Draw highlights
     if (!data.highlightsEnabled) return;
     
     const GL11 = Java.type("org.lwjgl.opengl.GL11");
@@ -968,40 +1584,29 @@ register('renderItemIntoGui', function(item, x, y) {
     GL11.glTranslatef(0, 0, 100);
     GL11.glDisable(GL11.GL_DEPTH_TEST);
     
-    // Check for search match
-    let isSearchMatch = false;
-    if (searchHexes.length > 0 && cacheData.itemHex) {
-      const itemHexUpper = cacheData.itemHex.toUpperCase();
-      for (let i = 0; i < searchHexes.length; i++) {
-        if (itemHexUpper === searchHexes[i]) {
-          isSearchMatch = true;
-          break;
-        }
-      }
-    }
-    
+    // Use pre-calculated highlight states (calculated during precache or live analysis)
     const currentWordMatch = (data.wordsEnabled && cacheData.wordMatch) ? cacheData.wordMatch : null;
     const currentSpecialPattern = (data.patternsEnabled && cacheData.specialPattern) ? cacheData.specialPattern : null;
 
-    if (isSearchMatch) {
+    // Priority order: Dupe > Search > Word > Pattern > Tier
+    if (cacheData.isDupe) {
+      Renderer.drawRect(Renderer.color(0, 0, 0, 200), x, y, 16, 16);
+    } else if (cacheData.isSearchMatch) {
       Renderer.drawRect(Renderer.color(0, 255, 0, 150), x, y, 16, 16);
-    } else if (currentWordMatch && data.wordsEnabled) {
+    } else if (currentWordMatch) {
       Renderer.drawRect(Renderer.color(139, 69, 19, 150), x, y, 16, 16);
     } else if (currentSpecialPattern) {
       Renderer.drawRect(Renderer.color(147, 51, 234, 150), x, y, 16, 16);
     } else if (cacheData.tier !== 3) {
-      // Check if it's CURRENTLY a custom color (not just cached)
-      const isCurrentlyCustom = cacheData.analysis && cacheData.analysis.bestMatch && 
-                                isCustomColor(cacheData.analysis.bestMatch.name);
+      const isCurrentlyCustom = cacheData.isCustom;
       
-      if (isCurrentlyCustom || cacheData.isCustom) {
-        // Custom colors: Dark green (T1) and Olive green (T2)
+      if (isCurrentlyCustom) {
         if (cacheData.tier === 0) {
-          Renderer.drawRect(Renderer.color(0, 100, 0, 150), x, y, 16, 16); // Dark green
+          Renderer.drawRect(Renderer.color(0, 100, 0, 150), x, y, 16, 16);
         } else if (cacheData.tier === 1) {
-          Renderer.drawRect(Renderer.color(85, 107, 47, 150), x, y, 16, 16); // Olive/dark olive green
+          Renderer.drawRect(Renderer.color(85, 107, 47, 150), x, y, 16, 16);
         } else if (cacheData.tier === 2) {
-          Renderer.drawRect(Renderer.color(128, 128, 0, 120), x, y, 16, 16); // Olive (yellow-green)
+          Renderer.drawRect(Renderer.color(128, 128, 0, 120), x, y, 16, 16);
         }
       } else if (cacheData.isFade) {
         if (cacheData.tier === 0) {
@@ -1025,7 +1630,7 @@ register('renderItemIntoGui', function(item, x, y) {
     GL11.glEnable(GL11.GL_DEPTH_TEST);
     GL11.glPopMatrix();
   } catch (e) {
-    if (DEBUG) ChatLib.chat("§c[Debug] renderItemIntoGui error: " + e);
+    // Silent fail
   }
 });
 
@@ -1079,7 +1684,8 @@ register("itemTooltip", function(lore, item, event) {
     
     if (!cacheData || !cacheData.analysis) return;
     
-    setHoveredItemData(cacheData);
+    const uuid = extractUuidFromItem(item);
+    setHoveredItemData(cacheData, uuid, itemName);
     
     if (DEBUG) ChatLib.chat("§a[Debug] Tooltip hoveredItemData set!");
     
@@ -1107,6 +1713,7 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
     const isContainer = gui instanceof GuiContainer;
     
     let foundItem = null;
+    let foundUuid = null;
     
     if (isContainer) {
       try {
@@ -1140,6 +1747,7 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
           if (theSlot && theSlot.func_75216_d()) {
             const mcStack = theSlot.func_75211_c();
             foundItem = new Item(mcStack);
+            foundUuid = extractUuidFromItem(foundItem);
             if (DEBUG) ChatLib.chat("§a[Debug] Found item using theSlot: " + foundItem.getName());
           }
         }
@@ -1160,7 +1768,7 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
         let cacheData = itemCache.get(stack);
         
         if (!cacheData) {
-          const uuid = extractUuidFromItem(foundItem);
+          const uuid = foundUuid;
           
           if (uuid && collection[uuid]) {
             cacheData = getCacheDataFromCollection(uuid);
@@ -1191,7 +1799,7 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
         }
         
         if (cacheData && cacheData.analysis) {
-          setHoveredItemData(cacheData);
+          setHoveredItemData(cacheData, foundUuid, itemName);
 
           if (DEBUG) ChatLib.chat("§a[Debug] hoveredItemData FORCE UPDATED from container!");
         }
@@ -1250,9 +1858,16 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
     }
     
     const boxWidth = Math.max(170, Math.min(maxTextWidth, 400));
-    let boxHeight = isShiftHeld ? 110 : 80;
+    let boxHeight = isShiftHeld ? 120 : 90;
     if (data.wordsEnabled && infoData.wordMatch) boxHeight += 10;
     if (data.patternsEnabled && infoData.specialPattern) boxHeight += 10;
+
+    // ONLY add space for dupe warning if dupes enabled AND we actually found a dupe
+    if (data.dupesEnabled) {
+      const hoveredUuid = hoveredItemData.uuid || null;
+      const dupeCheck = checkForDupeHex(infoData.itemHex, hoveredUuid);
+      if (dupeCheck) boxHeight += 10;
+    }
     
     const isMouseOver = actualMouseX >= boxX && actualMouseX <= boxX + boxWidth &&
                         actualMouseY >= boxY && actualMouseY <= boxY + boxHeight;
@@ -1373,8 +1988,30 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
       }
       
       Renderer.drawStringWithShadow(tierText, boxX + 5, boxY + currentYOffset + 40);
+      
+      // Check if piece is owned in collection (at the bottom) - USE CACHED DATA
+      if (infoData.ownedPiece) {
+          let ownershipText;
+          // Use the BETTER tier between current piece and collection piece
+          const bestTier = Math.min(infoData.tier, infoData.ownedPiece.tier);
+          if (bestTier <= 1) {
+              ownershipText = "§a§l✓ Checklist";
+          } else if (bestTier === 2) {
+              ownershipText = "§e§l✓ Checklist";
+          } else {
+              ownershipText = "§7§l✓ Checklist";
+          }
+          Renderer.drawStringWithShadow(ownershipText, boxX + 5, boxY + currentYOffset + 50);
+      } else {
+          Renderer.drawStringWithShadow("§c§l✗ Checklist", boxX + 5, boxY + currentYOffset + 50);
+      }
+
+      // Check for exact dupe hex - USE CACHED DATA
+      if (infoData.dupeCheck) {
+          Renderer.drawStringWithShadow("§c§l⚠ DUPE HEX §7(x" + infoData.dupeCheck.count + ")", boxX + 5, boxY + currentYOffset + 60);
+      }
     }
-    
+
     GL11.glEnable(GL11.GL_DEPTH_TEST);
     GL11.glPopMatrix();
     
@@ -1550,6 +2187,24 @@ register("command", function() {
     const args = Array.prototype.slice.call(arguments);
     const arg1 = args[0];
     const arg2 = args[1];
+
+// Handle database/db subcommand
+  if (arg1 && (arg1.toLowerCase() === "database" || arg1.toLowerCase() === "db")) {
+    dbGui.open();
+    return;
+  }
+  
+  // Handle sets/checklist subcommand
+  if (arg1 && (arg1.toLowerCase() === "sets" || arg1.toLowerCase() === "checklist")) {
+    armorGui.open();
+    return;
+  }
+
+  // Handle bestsets subcommand
+  if (arg1 && (arg1.toLowerCase() === "bestsets" || arg1.toLowerCase() === "best")) {
+    bestSetsGui.open();
+    return;
+  }
   
   // Handle scan subcommand
   if (arg1 && arg1.toLowerCase() === "scan") {
@@ -1574,18 +2229,26 @@ register("command", function() {
   }
   
   // Handle clear subcommand
-  if (arg1 && arg1.toLowerCase() === "clear") {
-    clearAllCaches();
-    
-    const collectionKeys = Object.keys(collection);
-    for (let i = 0; i < collectionKeys.length; i++) {
-      delete collection[collectionKeys[i]];
-    }
-    collection.save();
-    
-    ChatLib.chat("§a[Seymour Analyzer] §7Cache and collection cleared!");
+if (arg1 && arg1.toLowerCase() === "clear") {
+  if (!arg2 || arg2.toLowerCase() !== "yes") {
+    const count = Object.keys(collection).length;
+    ChatLib.chat("§c§l[WARNING] §cAre you sure you want to clear your collection?");
+    ChatLib.chat("§7This will delete §e" + count + " §7scanned pieces!");
+    ChatLib.chat("§7Type §e/seymour clear yes §7to confirm");
     return;
   }
+  
+  clearAllCaches();
+  
+  const collectionKeys = Object.keys(collection);
+  for (let i = 0; i < collectionKeys.length; i++) {
+    delete collection[collectionKeys[i]];
+  }
+  collection.save();
+  
+  ChatLib.chat("§a[Seymour Analyzer] §7Cache and collection cleared!");
+  return;
+}
   
   // Handle search subcommand
   if (arg1 && arg1.toLowerCase() === "search") {
@@ -1595,6 +2258,7 @@ register("command", function() {
     if (arg2 && arg2.toLowerCase() === "clear") {
       highlightedChests = [];
       searchHexes = [];
+      updateSearchMatchesInCache();  // <-- ADD THIS LINE
       ChatLib.chat("§a[Seymour Analyzer] §7Search cleared!");
       return;
     }
@@ -1630,6 +2294,7 @@ register("command", function() {
     }
     
     searchHexes = validHexes;
+    updateSearchMatchesInCache();
     const foundPieces = searchForHexes(validHexes);
     
     ChatLib.chat("§8§m----------------------------------------------------");
@@ -1654,70 +2319,185 @@ register("command", function() {
   // Handle rebuild subcommand
   if (arg1 && arg1.toLowerCase() === "rebuild") {
     if (!arg2) {
-      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour rebuild <words|analysis>");
+      ChatLib.chat("§8§m----------------------------------------------------");
+      ChatLib.chat("§a§l[Seymour Analyzer] §7- Rebuild Commands:");
+      ChatLib.chat("§e/seymour rebuild words §7- Rebuild word matches");
+      ChatLib.chat("§e/seymour rebuild analysis §7- Rebuild analysis with current toggles");
+      ChatLib.chat("§e/seymour rebuild matches §7- Rebuild top 3 match data");
+      ChatLib.chat("§8§m----------------------------------------------------");
       return;
     }
     
     if (arg2.toLowerCase() === "words") {
     
-    const collectionKeys = Object.keys(collection);
-    let updatedCount = 0;
+    ChatLib.chat("§a[Seymour Analyzer] §7Preparing word rebuild...");
     
-    for (let i = 0; i < collectionKeys.length; i++) {
-      const uuid = collectionKeys[i];
-      const piece = collection[uuid];
-      if (piece && piece.hexcode) {
-        const wordMatch = matchesWordPattern(piece.hexcode);
-        piece.wordMatch = wordMatch ? wordMatch.word : null;
-        updatedCount++;
+    setTimeout(function() {
+      const collectionKeys = Object.keys(collection);
+      let updatedCount = 0;
+      
+      ChatLib.chat("§a[Seymour Analyzer] §7Starting word rebuild for §e" + collectionKeys.length + " §7pieces...");
+      
+      function processWordBatch(startIndex) {
+        const batchSize = 50;
+        const endIndex = Math.min(startIndex + batchSize, collectionKeys.length);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+          const uuid = collectionKeys[i];
+          const piece = collection[uuid];
+          if (piece && piece.hexcode) {
+            const wordMatch = matchesWordPattern(piece.hexcode);
+            piece.wordMatch = wordMatch ? wordMatch.word : null;
+            updatedCount++;
+          }
+        }
+        
+        if (endIndex < collectionKeys.length) {
+          if (endIndex % 500 === 0 || endIndex < 500) {
+            ChatLib.chat("§7Progress: §e" + endIndex + "§7/§e" + collectionKeys.length + " §7(§a" + Math.floor(endIndex/collectionKeys.length*100) + "%§7)");
+          }
+          setTimeout(function() { processWordBatch(endIndex); }, 10);
+        } else {
+          ChatLib.chat("§7Saving and clearing caches...");
+          setTimeout(function() {
+            collection.save();
+            clearAllCaches();
+            ChatLib.chat("§a[Seymour Analyzer] §7Rebuilt word matches for §e" + updatedCount + " §7pieces!");
+          }, 10);
+        }
       }
-    }
-    
-    collection.save();
-    clearAllCaches();
-    
-    ChatLib.chat("§a[Seymour Analyzer] §7Rebuilt word matches for §e" + updatedCount + " §7pieces!");
+      
+      processWordBatch(0);
+    }, 10);
       return;
     }
     
     if (arg2.toLowerCase() === "analysis") {
-    const collectionKeys = Object.keys(collection);
-    let updatedCount = 0;
     
-    for (let i = 0; i < collectionKeys.length; i++) {
-      const uuid = collectionKeys[i];
-      const piece = collection[uuid];
-      if (piece && piece.hexcode && piece.pieceName) {
-        const analysis = analyzeSeymourArmor(piece.hexcode, piece.pieceName);
-        if (analysis) {
-          const best = analysis.bestMatch;
-          const itemRgb = hexToRgb(piece.hexcode);
-          const targetRgb = hexToRgb(best.targetHex);
-          const absoluteDist = Math.abs(itemRgb.r - targetRgb.r) + 
-                               Math.abs(itemRgb.g - targetRgb.g) + 
-                               Math.abs(itemRgb.b - targetRgb.b);
-          
-          piece.bestMatch = {
-            colorName: best.name,
-            targetHex: best.targetHex,
-            deltaE: best.deltaE,
-            absoluteDistance: absoluteDist,
-            tier: analysis.tier
-          };
-          updatedCount++;
+    ChatLib.chat("§a[Seymour Analyzer] §7Preparing analysis rebuild...");
+    
+    setTimeout(function() {
+      const collectionKeys = Object.keys(collection);
+      let updatedCount = 0;
+      
+      ChatLib.chat("§a[Seymour Analyzer] §7Starting analysis rebuild for §e" + collectionKeys.length + " §7pieces...");
+      
+      function processAnalysisBatch(startIndex) {
+        const batchSize = 50;
+        const endIndex = Math.min(startIndex + batchSize, collectionKeys.length);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+          const uuid = collectionKeys[i];
+          const piece = collection[uuid];
+          if (piece && piece.hexcode && piece.pieceName) {
+            const analysis = analyzeSeymourArmor(piece.hexcode, piece.pieceName);
+            if (analysis) {
+              const best = analysis.bestMatch;
+              const itemRgb = hexToRgb(piece.hexcode);
+              const targetRgb = hexToRgb(best.targetHex);
+              const absoluteDist = Math.abs(itemRgb.r - targetRgb.r) + 
+                                   Math.abs(itemRgb.g - targetRgb.g) + 
+                                   Math.abs(itemRgb.b - targetRgb.b);
+              
+              piece.bestMatch = {
+                colorName: best.name,
+                targetHex: best.targetHex,
+                deltaE: best.deltaE,
+                absoluteDistance: absoluteDist,
+                tier: analysis.tier
+              };
+              updatedCount++;
+            }
+          }
+        }
+        
+        if (endIndex < collectionKeys.length) {
+          if (endIndex % 500 === 0 || endIndex < 500) {
+            ChatLib.chat("§7Progress: §e" + endIndex + "§7/§e" + collectionKeys.length + " §7(§a" + Math.floor(endIndex/collectionKeys.length*100) + "%§7)");
+          }
+          setTimeout(function() { processAnalysisBatch(endIndex); }, 10);
+        } else {
+          ChatLib.chat("§7Saving and clearing caches...");
+          setTimeout(function() {
+            collection.save();
+            clearAllCaches();
+            ChatLib.chat("§a[Seymour Analyzer] §7Rebuilt analysis for §e" + updatedCount + " §7pieces!");
+            ChatLib.chat("§7This applied current toggle settings (fade/3p/sets/custom)");
+          }, 10);
         }
       }
-    }
-    
-    collection.save();
-    clearAllCaches();
-    
-    ChatLib.chat("§a[Seymour Analyzer] §7Rebuilt analysis for §e" + updatedCount + " §7pieces!");
-      ChatLib.chat("§7This applied current toggle settings (fade/3p/sets/custom)");
+      
+      processAnalysisBatch(0);
+    }, 10);
       return;
     }
     
-    ChatLib.chat("§a[Seymour Analyzer] §cInvalid rebuild option! Use 'words' or 'analysis'");
+    if (arg2.toLowerCase() === "matches") {
+      
+      ChatLib.chat("§a[Seymour Analyzer] §7Preparing matches rebuild...");
+      
+      setTimeout(function() {
+        const collectionKeys = Object.keys(collection);
+        let updatedCount = 0;
+        
+        ChatLib.chat("§a[Seymour Analyzer] §7Starting matches rebuild for §e" + collectionKeys.length + " §7pieces...");
+        
+        function processMatchesBatch(startIndex) {
+          const batchSize = 50;
+          const endIndex = Math.min(startIndex + batchSize, collectionKeys.length);
+          
+          for (let i = startIndex; i < endIndex; i++) {
+            const uuid = collectionKeys[i];
+            const piece = collection[uuid];
+            if (piece && piece.hexcode && piece.pieceName) {
+              const analysis = analyzeSeymourArmor(piece.hexcode, piece.pieceName);
+              if (analysis && analysis.top3Matches) {
+                const itemRgb = hexToRgb(piece.hexcode);
+                const top3Matches = [];
+                
+                for (let m = 0; m < 3 && m < analysis.top3Matches.length; m++) {
+                  const match = analysis.top3Matches[m];
+                  const matchRgb = hexToRgb(match.targetHex);
+                  const matchAbsoluteDist = Math.abs(itemRgb.r - matchRgb.r) + 
+                                            Math.abs(itemRgb.g - matchRgb.g) + 
+                                            Math.abs(itemRgb.b - matchRgb.b);
+                  
+                  top3Matches[m] = {
+                    colorName: match.name,
+                    targetHex: match.targetHex,
+                    deltaE: match.deltaE,
+                    absoluteDistance: matchAbsoluteDist,
+                    tier: match.tier
+                  };
+                }
+                
+                piece.allMatches = top3Matches;
+                updatedCount++;
+              }
+            }
+          }
+          
+          if (endIndex < collectionKeys.length) {
+            if (endIndex % 500 === 0 || endIndex < 500) {
+              ChatLib.chat("§7Progress: §e" + endIndex + "§7/§e" + collectionKeys.length + " §7(§a" + Math.floor(endIndex/collectionKeys.length*100) + "%§7)");
+            }
+            setTimeout(function() { processMatchesBatch(endIndex); }, 10);
+          } else {
+            ChatLib.chat("§7Saving and clearing caches...");
+            setTimeout(function() {
+              collection.save();
+              clearAllCaches();
+              ChatLib.chat("§a[Seymour Analyzer] §7Rebuilt match data for §e" + updatedCount + " §7pieces!");
+            }, 10);
+          }
+        }
+        
+        processMatchesBatch(0);
+      }, 10);
+      return;
+    }
+    
+    ChatLib.chat("§a[Seymour Analyzer] §cInvalid rebuild option! Use 'words', 'analysis', or 'matches'");
     return;
   }
 
@@ -1989,14 +2769,29 @@ register("command", function() {
   }
   
   // Handle toggle subcommands
-  if (arg1 && arg1.toLowerCase() === "toggle") {
-    if (arg2 && arg2.toLowerCase() === "infobox") {
+  if (arg1 && (arg1.toLowerCase() === "toggle" || arg1.toLowerCase() === "toggles")) {
+    if (!arg2) {
+      // Show all toggles when no argument provided
+      ChatLib.chat("§8§m----------------------------------------------------");
+      ChatLib.chat("§a§l[Seymour Analyzer] §7- Toggles:");
+      ChatLib.chat("§e/seymour toggle infobox §7- Toggle info box §8[" + (data.infoBoxEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§e/seymour toggle highlights §7- Toggle item highlights §8[" + (data.highlightsEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§e/seymour toggle fade §7- Toggle fade dyes §8[" + (data.fadeDyesEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§e/seymour toggle 3p §7- Toggle 3p sets filter §8[" + (data.threePieceSetsEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§e/seymour toggle sets §7- Toggle piece-specific matching §8[" + (data.pieceSpecificEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§e/seymour toggle words §7- Toggle word highlights §8[" + (data.wordsEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§e/seymour toggle pattern §7- Toggle pattern highlights §8[" + (data.patternsEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§e/seymour toggle custom §7- Toggle custom colors §8[" + (data.customColorsEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§e/seymour toggle dupes §7- Toggle dupe highlights §8[" + (data.dupesEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§8§m----------------------------------------------------");
+      return;
+    } else if (arg2.toLowerCase() === "infobox") {
       data.infoBoxEnabled = !data.infoBoxEnabled;
       data.save();
       
       ChatLib.chat("§a[Seymour Analyzer] §7Info box " + (data.infoBoxEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
-    } else if (arg2 && arg2.toLowerCase() === "highlights") {
+    } else if (arg2.toLowerCase() === "highlights") {
       data.highlightsEnabled = !data.highlightsEnabled;
       data.save();
       
@@ -2005,7 +2800,7 @@ register("command", function() {
       
       ChatLib.chat("§a[Seymour Analyzer] §7Item highlights " + (data.highlightsEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
-    } else if (arg2 && arg2.toLowerCase() === "sets") {
+    } else if (arg2.toLowerCase() === "sets") {
       data.pieceSpecificEnabled = !data.pieceSpecificEnabled;
       data.save();
       
@@ -2013,7 +2808,7 @@ register("command", function() {
       
       ChatLib.chat("§a[Seymour Analyzer] §7Piece-specific matching " + (data.pieceSpecificEnabled ? "§aenabled§7! (Colors only match their piece types)" : "§cdisabled§7! (Universal matching)"));
       return;
-    } else if (arg2 && arg2.toLowerCase() === "fade") {
+    } else if (arg2.toLowerCase() === "fade") {
       data.fadeDyesEnabled = !data.fadeDyesEnabled;
       data.save();
       
@@ -2021,7 +2816,7 @@ register("command", function() {
       
       ChatLib.chat("§a[Seymour Analyzer] §7Fade dyes " + (data.fadeDyesEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
-    } else if (arg2 && arg2.toLowerCase() === "3p") {
+    } else if (arg2.toLowerCase() === "3p") {
       data.threePieceSetsEnabled = !data.threePieceSetsEnabled;
       data.save();
       
@@ -2029,7 +2824,7 @@ register("command", function() {
       
       ChatLib.chat("§a[Seymour Analyzer] §73-piece sets filter " + (data.threePieceSetsEnabled ? "§aenabled§7! (Top Hats won't match 3p sets)" : "§cdisabled§7! (Top Hats can match 3p sets)"));
       return;
-    } else if (arg2 && arg2.toLowerCase() === "words") {
+    } else if (arg2.toLowerCase() === "words") {
       data.wordsEnabled = !data.wordsEnabled;
       data.save();
       
@@ -2038,7 +2833,7 @@ register("command", function() {
       
       ChatLib.chat("§a[Seymour Analyzer] §7Word highlights " + (data.wordsEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
-    } else if (arg2 && arg2.toLowerCase() === "pattern") {
+    } else if (arg2.toLowerCase() === "pattern") {
       data.patternsEnabled = !data.patternsEnabled;
       data.save();
       
@@ -2047,7 +2842,7 @@ register("command", function() {
       
       ChatLib.chat("§a[Seymour Analyzer] §7Pattern highlights " + (data.patternsEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
-    } else if (arg2 && arg2.toLowerCase() === "custom") {
+    } else if (arg2.toLowerCase() === "custom") {
       data.customColorsEnabled = !data.customColorsEnabled;
       data.save();
       
@@ -2055,8 +2850,16 @@ register("command", function() {
       
       ChatLib.chat("§a[Seymour Analyzer] §7Custom colors " + (data.customColorsEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
+    } else if (arg2.toLowerCase() === "dupes") {
+      data.dupesEnabled = !data.dupesEnabled;
+      data.save();
+      
+      clearAllCaches();
+      
+      ChatLib.chat("§a[Seymour Analyzer] §7Dupe highlights " + (data.dupesEnabled ? "§aenabled" : "§cdisabled") + "§7!");
+      return;
     } else {
-      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour toggle <infobox|highlights|fade|3p|sets|words|pattern|custom>");
+      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour toggle <infobox|highlights|fade|3p|sets|words|pattern|custom|dupes>");
       return;
     }
   }
@@ -2073,36 +2876,63 @@ register("command", function() {
   // Show help menu (default)
   ChatLib.chat("§8§m----------------------------------------------------");
   ChatLib.chat("§a§l[Seymour Analyzer] §7Commands:");
-  ChatLib.chat("§e/seymour §7- Show this help menu");
-  ChatLib.chat("§e/seymour scan start §7- Start scanning pieces");
-  ChatLib.chat("§e/seymour scan stop §7- Stop scanning pieces");
-  ChatLib.chat("§e/seymour rebuild analysis §7- Rebuild all with current toggles");
-  ChatLib.chat("§e/seymour search <hexes> §7- Highlight chests with hex codes");
-  ChatLib.chat("§e/seymour search clear §7- Clear search highlights");
-  ChatLib.chat("§e/seymour clear §7- Clear all caches & collection");
+  ChatLib.chat("§f/seymour §7- Show this help menu");
+  ChatLib.chat("§e/seymour database §7- Open database");
+  ChatLib.chat("§e/seymour checklist §7- Open armor checklist");
+  ChatLib.chat("§e/seymour bestsets §7- Find best matching 4-piece sets");
+  ChatLib.chat("§a/seymour scan start §7- Start scanning pieces");
+  ChatLib.chat("§a/seymour scan stop §7- Stop scanning pieces");
+  ChatLib.chat("§c/seymour rebuild §7- Show all rebuild commands");
+  ChatLib.chat("§2/seymour search <hexes> §7- Highlight chests with hex codes");
+  ChatLib.chat("§2/seymour search clear §7- Clear search highlights");
+  ChatLib.chat("§4/seymour clear §7- Clear all caches & collection");
+  ChatLib.chat("§c/seymour resetpos §7- Reset info box position");
+  ChatLib.chat("§6/seymour add <name> <hex> §7- Add custom color");
+  ChatLib.chat("§6/seymour remove <name> §7- Remove custom color");
+  ChatLib.chat("§6/seymour list §7- List all custom colors");
+  ChatLib.chat("§5/seymour word add <word> <pattern> §7- Add word pattern");
+  ChatLib.chat("§5/seymour word remove <word> §7- Remove word pattern");
+  ChatLib.chat("§5/seymour word list §7- List all word patterns");
   ChatLib.chat("§e/seymour compare <hexes> §7- Compare multiple hex codes");
-  ChatLib.chat("§e/seymour resetpos §7- Reset info box position");
-  ChatLib.chat("§e/seymour add <name> <hex> §7- Add custom color");
-  ChatLib.chat("§e/seymour remove <name> §7- Remove custom color");
-  ChatLib.chat("§e/seymour list §7- List all custom colors");
-  ChatLib.chat("§e/seymour word add <word> <pattern> §7- Add word pattern");
-  ChatLib.chat("§e/seymour word remove <word> §7- Remove word pattern");
-  ChatLib.chat("§e/seymour word list §7- List all word patterns");
-  ChatLib.chat("§e/seymour rebuild words §7- Clears caches for words");
-  ChatLib.chat("§e/seymour toggle infobox §7- Toggle info box §8[" + (data.infoBoxEnabled ? "§a✓" : "§c✗") + "§8]");
-  ChatLib.chat("§e/seymour toggle highlights §7- Toggle item highlights §8[" + (data.highlightsEnabled ? "§a✓" : "§c✗") + "§8]");
-  ChatLib.chat("§e/seymour toggle fade §7- Toggle fade dyes §8[" + (data.fadeDyesEnabled ? "§a✓" : "§c✗") + "§8]");
-  ChatLib.chat("§e/seymour toggle 3p §7- Toggle 3p sets filter §8[" + (data.threePieceSetsEnabled ? "§a✓" : "§c✗") + "§8]");
-  ChatLib.chat("§e/seymour toggle sets §7- Toggle piece-specific matching §8[" + (data.pieceSpecificEnabled ? "§a✓" : "§c✗") + "§8]");
-  ChatLib.chat("§e/seymour toggle words §7- Toggle word highlights §8[" + (data.wordsEnabled ? "§a✓" : "§c✗") + "§8]");
-  ChatLib.chat("§e/seymour toggle pattern §7- Toggle pattern highlights §8[" + (data.patternsEnabled ? "§a✓" : "§c✗") + "§8]");
-  ChatLib.chat("§e/seymour toggle custom §7- Toggle custom colors §8[" + (data.customColorsEnabled ? "§a✓" : "§c✗") + "§8]");
+  ChatLib.chat("§e/seymour toggle §7- Show all toggles and their status");
   ChatLib.chat("§7Collection: §e" + Object.keys(collection).length + " §7pieces");
   ChatLib.chat("§8§m----------------------------------------------------");
   } finally {
     commandExecuting = false;
   }
 }).setName("seymour");
+
+// ===== GUI INSTANCES =====
+const dbGui = new DatabaseGUI();
+const armorGui = new ArmorChecklistGUI(collection);
+const bestSetsGui = new BestSetsGUI(collection);
+
+// Commands to open GUIs
+register("command", () => {
+  dbGui.open();
+}).setName("seymourdb").setAliases("sdb");
+
+register("command", () => {
+  bestSetsGui.open();
+}).setName("seymoursets").setAliases("bestsets");
+
+register("command", () => {
+  armorGui.open();
+}).setName("armorsets").setAliases("checklist");
+
+// ===== WORD MATCHES GUI =====
+const wordMatchesGui = new WordMatchesGUI();
+
+register("command", () => {
+    wordMatchesGui.open();
+}).setName("seymourwords").setAliases("words");
+
+// ===== PATTERN MATCHES GUI =====
+const patternMatchesGui = new PatternMatchesGUI();
+
+register("command", () => {
+    patternMatchesGui.open();
+}).setName("seymourpatterns").setAliases("patterns");
 
 // ===== SEARCH AND HIGHLIGHT CHESTS =====
 function searchForHexes(hexes) {
@@ -2169,4 +2999,45 @@ function searchForHexes(hexes) {
   }
   
   return foundPieces;
+}
+
+// ===== UPDATE SEARCH MATCHES IN CACHE =====
+function updateSearchMatchesInCache() {
+  // Update all uuidCache entries
+  const uuidKeys = Object.keys(uuidCache);
+  for (let i = 0; i < uuidKeys.length; i++) {
+    const cacheEntry = uuidCache[uuidKeys[i]];
+    if (!cacheEntry || !cacheEntry.itemHex) continue;
+    
+    cacheEntry.isSearchMatch = false;
+    if (searchHexes.length > 0) {
+      const hexUpper = cacheEntry.itemHex.toUpperCase();
+      for (let s = 0; s < searchHexes.length; s++) {
+        if (hexUpper === searchHexes[s]) {
+          cacheEntry.isSearchMatch = true;
+          break;
+        }
+      }
+    }
+  }
+  
+  // CRITICAL: Must clear itemCache to force items to re-render with updated search states
+  itemCache.clear();
+  
+  // Also clear hoveredItemData if it exists
+  hoveredItemData = null;
+  
+  // Force immediate recache if GUI is open
+  const container = Player.getContainer();
+  if (container) {
+    precacheComplete = false;
+    isPrecaching = true;
+    setTimeout(function() {
+      precacheChestItems();
+      isPrecaching = false;
+    }, 50);
+  } else {
+    precacheComplete = false;
+    needsRecache = true;
+  }
 }
