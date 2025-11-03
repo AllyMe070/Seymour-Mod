@@ -347,5 +347,3 @@ export const FADE_DYES = [
   "Sunset",
   "Warden"
 ];
-
-
