@@ -21,6 +21,16 @@ export class DatabaseGUI {
     this.sortColumn = null;
     this.sortDirection = "asc";
     this.expandedPieceUuid = null;
+    this.cachedHexSearch = null;
+    this.cachedFilteredPieces = null;
+    this.lastSearchText = "";
+    this.lastHexSearchText = "";
+    this.lastSortColumn = null;
+    this.lastSortDirection = "asc";
+    this.cachedSortedPieces = null;
+    this.showDupesOnly = false;
+    this.lastShowDupesOnly = false;
+    this.cachedTierCounts = null;
 }
 
     open() {
@@ -76,6 +86,10 @@ newPiece.absoluteDistance = storedAbsDist;
 newPiece.tier = storedTier;
 newPiece.isFadeDye = storedIsFade;
 newPiece.isCustomColor = storedIsCustom;
+newPiece.nameLower = storedName.toLowerCase();
+newPiece.matchLower = storedMatchName.toLowerCase();
+newPiece.hexLower = storedHex.toLowerCase();
+newPiece.deltaString = storedDeltaE.toFixed(2);
 
 // Push to array instead of indexing
 this.allPieces.push(newPiece);
@@ -84,7 +98,51 @@ loadIndex = loadIndex + 1;
             }
             
             ChatLib.chat("§a[Seymour GUI] §7Loaded " + this.allPieces.length + " pieces");
-
+            
+            // Sort by deltaE on first load (best to worst)
+            this.allPieces.sort(function(a, b) {
+                const deltaA = a.deltaE + 0;
+                const deltaB = b.deltaE + 0;
+                return deltaA - deltaB;
+            });
+            
+        // Calculate tier counts
+            this.cachedTierCounts = { t1Normal: 0, t1Fade: 0, t2Normal: 0, t2Fade: 0, dupes: 0 };
+            const hexCountMap = {};
+            
+            // Count hex occurrences
+            let hexIdx = 0;
+            while (hexIdx < this.allPieces.length) {
+                const hexVal = this.allPieces[hexIdx].hex;
+                hexCountMap[hexVal] = (hexCountMap[hexVal] || 0) + 1;
+                hexIdx = hexIdx + 1;
+            }
+            
+            // Count tiers
+            let idx = 0;
+            while (idx < this.allPieces.length) {
+                const p = this.allPieces[idx];
+                
+                if (hexCountMap[p.hex] > 1) {
+                    this.cachedTierCounts.dupes = this.cachedTierCounts.dupes + 1;
+                }
+                
+                if (p.deltaE <= 2) {
+                    if (p.isCustomColor || !p.isFadeDye) {
+                        this.cachedTierCounts.t1Normal = this.cachedTierCounts.t1Normal + 1;
+                    } else {
+                        this.cachedTierCounts.t1Fade = this.cachedTierCounts.t1Fade + 1;
+                    }
+                } else if (p.deltaE <= 5) {
+                    if (p.isFadeDye && !p.isCustomColor) {
+                        this.cachedTierCounts.t2Fade = this.cachedTierCounts.t2Fade + 1;
+                    } else {
+                        this.cachedTierCounts.t2Normal = this.cachedTierCounts.t2Normal + 1;
+                    }
+                }
+                
+                idx = idx + 1;
+            }
         } catch (e) {
             ChatLib.chat("§c[Seymour GUI] Error loading: " + e);
         }
@@ -159,6 +217,10 @@ loadIndex = loadIndex + 1;
                 self.searchText = self.searchText.substring(0, self.searchText.length - 1);
             }
             self.scrollOffset = 0;
+            self.cachedFilteredPieces = null;
+            self.cachedSortedPieces = null;
+            self.lastSearchText = "";
+            self.lastHexSearchText = "";
         } else if (self.hexSearchBoxActive) {
             if (self.hexSearchTextSelected) {
                 self.hexSearchText = "";
@@ -167,6 +229,10 @@ loadIndex = loadIndex + 1;
                 self.hexSearchText = self.hexSearchText.substring(0, self.hexSearchText.length - 1);
             }
             self.scrollOffset = 0;
+            self.cachedFilteredPieces = null;
+            self.cachedSortedPieces = null;
+            self.lastSearchText = "";
+            self.lastHexSearchText = "";
         }
     } else if (self.searchBoxActive || self.hexSearchBoxActive) {
         const Keyboard = Java.type("org.lwjgl.input.Keyboard");
@@ -215,13 +281,18 @@ loadIndex = loadIndex + 1;
                     self.hexSearchText = self.hexSearchText + pastedText;
                 }
                 self.scrollOffset = 0;
+                self.scrollOffset = 0;
+                self.cachedFilteredPieces = null;
+                self.cachedSortedPieces = null;
+                self.lastSearchText = "";
+                self.lastHexSearchText = "";
             }
             return;
         }
         
         // Normal character input
         if (char) {
-            if (keyCode !== 42 && keyCode !== 54 && keyCode !== 29 && keyCode !== 157 && keyCode !== 56 && keyCode !== 184) {
+            if (keyCode !== 42 && keyCode !== 54 && keyCode !== 29 && keyCode !== 157 && keyCode !== 56 && keyCode !== 184 && keyCode !== 60) {
                 if (activeBox === "search") {
                     if (self.searchTextSelected) {
                         self.searchText = char;
@@ -238,6 +309,10 @@ loadIndex = loadIndex + 1;
                     }
                 }
                 self.scrollOffset = 0;
+                self.cachedFilteredPieces = null;
+                self.cachedSortedPieces = null;
+                self.lastSearchText = "";
+                self.lastHexSearchText = "";
             }
         }
     }
@@ -273,6 +348,19 @@ loadIndex = loadIndex + 1;
     if (button === 1) {
         self.handleRightClick(actualMouseX, actualMouseY);
         return;
+    }
+    
+    // Check dupes button (left click)
+    if (button === 0) {
+        const dupesButtonWidth = 120;
+        const dupesButtonX = 20;
+        const dupesButtonY = height - 35;
+        
+        if (actualMouseX >= dupesButtonX && actualMouseX <= dupesButtonX + dupesButtonWidth &&
+            actualMouseY >= dupesButtonY && actualMouseY <= dupesButtonY + 20) {
+            self.toggleDupesFilter();
+            return;
+        }
     }
     
 // Check checklist button click FIRST
@@ -330,15 +418,15 @@ if (button === 0) {
                     
                     if (actualMouseX >= 20 && actualMouseX <= 180) {
     clickedColumn = "name";
-} else if (actualMouseX >= 200 && actualMouseX <= 285) {
+    } else if (actualMouseX >= 200 && actualMouseX <= 285) {
     clickedColumn = "hex";
-} else if (actualMouseX >= 300 && actualMouseX <= 540) {
+    } else if (actualMouseX >= 300 && actualMouseX <= 540) {
     clickedColumn = "match";
-} else if (actualMouseX >= 550 && actualMouseX <= 620) {
+    } else if (actualMouseX >= 550 && actualMouseX <= 620) {
     clickedColumn = "deltaE";
-} else if (actualMouseX >= 630 && actualMouseX <= 710) {
+    } else if (actualMouseX >= 630 && actualMouseX <= 710) {
     clickedColumn = "absolute";
-} else if (actualMouseX >= 710 && actualMouseX <= 800) {
+    } else if (actualMouseX >= 710 && actualMouseX <= 800) {
     clickedColumn = "distance";
 }
                     
@@ -385,6 +473,11 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
     this.searchBoxActive = false;
     this.hexSearchText = "";
     this.hexSearchBoxActive = false;
+    this.cachedFilteredPieces = null;
+    this.cachedSortedPieces = null;
+    this.cachedHexSearch = null;
+    this.lastSearchText = "";
+    this.lastHexSearchText = "";
     Client.currentGui.close();
 }
 
@@ -402,12 +495,63 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
     const rgb1 = this.hexToRgb(hex1);
     const rgb2 = this.hexToRgb(hex2);
     
-    const rDiff = Math.abs(rgb1.r - rgb2.r);
-    const gDiff = Math.abs(rgb1.g - rgb2.g);
-    const bDiff = Math.abs(rgb1.b - rgb2.b);
+    const rDiff = rgb1.r - rgb2.r;
+    const gDiff = rgb1.g - rgb2.g;
+    const bDiff = rgb1.b - rgb2.b;
     
     // Return Manhattan distance (sum of absolute differences)
-    return rDiff + gDiff + bDiff;
+    return Math.abs(rDiff) + Math.abs(gDiff) + Math.abs(bDiff);
+}
+
+rgbToXyz(rgb) {
+    let r = rgb.r / 255;
+    let g = rgb.g / 255;
+    let b = rgb.b / 255;
+    
+    r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+    g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+    b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+    
+    const x = (r * 0.4124564 + g * 0.3575761 + b * 0.1804375) * 100;
+    const y = (r * 0.2126729 + g * 0.7151522 + b * 0.0721750) * 100;
+    const z = (r * 0.0193339 + g * 0.1191920 + b * 0.9503041) * 100;
+    
+    return { x, y, z };
+}
+
+xyzToLab(xyz) {
+    const xn = 95.047, yn = 100.0, zn = 108.883;
+    
+    let x = xyz.x / xn;
+    let y = xyz.y / yn;
+    let z = xyz.z / zn;
+    
+    x = x > 0.008856 ? Math.pow(x, 1/3) : (7.787 * x + 16/116);
+    y = y > 0.008856 ? Math.pow(y, 1/3) : (7.787 * y + 16/116);
+    z = z > 0.008856 ? Math.pow(z, 1/3) : (7.787 * z + 16/116);
+    
+    const L = 116 * y - 16;
+    const a = 500 * (x - y);
+    const b = 200 * (y - z);
+    
+    return { L, a, b };
+}
+
+hexToLab(hex) {
+    const rgb = this.hexToRgb(hex);
+    const xyz = this.rgbToXyz(rgb);
+    return this.xyzToLab(xyz);
+}
+
+calculateDeltaE(hex1, hex2) {
+    const lab1 = this.hexToLab(hex1);
+    const lab2 = this.hexToLab(hex2);
+    
+    return Math.sqrt(
+        Math.pow(lab1.L - lab2.L, 2) + 
+        Math.pow(lab1.a - lab2.a, 2) + 
+        Math.pow(lab1.b - lab2.b, 2)
+    );
 }
 
 checkCustomColor(colorName) {
@@ -463,7 +607,45 @@ checkCustomColor(colorName) {
 }
 
     filterPiecesBySearch() {
+    // Check if we can use cached results
+    if (this.cachedFilteredPieces && 
+        this.lastSearchText === this.searchText && 
+        this.lastHexSearchText === this.hexSearchText &&
+        this.lastShowDupesOnly === this.showDupesOnly) {
+        return this.cachedFilteredPieces;
+    }
+    
+    // Update cache keys
+    this.lastSearchText = this.searchText;
+    this.lastHexSearchText = this.hexSearchText;
+    this.lastShowDupesOnly = this.showDupesOnly;
+    
     let filtered = this.allPieces;
+    
+    // First apply dupes filter if active
+    if (this.showDupesOnly) {
+        const hexCounts = {};
+        
+        // Count occurrences of each hex
+        let countIndex = 0;
+        while (countIndex < this.allPieces.length) {
+            const hex = this.allPieces[countIndex].hex;
+            hexCounts[hex] = (hexCounts[hex] || 0) + 1;
+            countIndex = countIndex + 1;
+        }
+        
+        // Filter to only show pieces with duplicate hexes
+        const dupesArray = [];
+        let filterIndex = 0;
+        while (filterIndex < filtered.length) {
+            const piece = filtered[filterIndex];
+            if (hexCounts[piece.hex] > 1) {
+                dupesArray.push(piece);
+            }
+            filterIndex = filterIndex + 1;
+        }
+        filtered = dupesArray;
+    }
     
     // First apply text search filter
     if (this.searchText && this.searchText.length > 0) {
@@ -473,16 +655,50 @@ checkCustomColor(colorName) {
         filtered = filtered.filter(function(piece) {
             if (!piece) return false;
             
-            const nameMatch = piece.name.toLowerCase().indexOf(searchLower) !== -1;
-            const hexMatch = piece.hex.toLowerCase().indexOf(searchLower) !== -1;
-            const deltaString = piece.deltaE.toFixed(2);
-            const deltaMatch = deltaString.indexOf(searchLower) !== -1;
+            // Check if search contains X wildcards for hex matching (case insensitive X)
+            const searchUpper = self.searchText.toUpperCase();
+            const hasWildcard = searchUpper.indexOf('X') !== -1;
+            
+            if (hasWildcard && searchUpper.length === 6 && /^[0-9A-FX]+$/.test(searchUpper)) {
+                // This is a hex pattern with wildcards - build regex
+                let regexPattern = "^";
+                
+                const char0 = searchUpper.charAt(0);
+                regexPattern = regexPattern + (char0 === 'X' ? "[0-9A-F]" : char0);
+                
+                const char1 = searchUpper.charAt(1);
+                regexPattern = regexPattern + (char1 === 'X' ? "[0-9A-F]" : char1);
+                
+                const char2 = searchUpper.charAt(2);
+                regexPattern = regexPattern + (char2 === 'X' ? "[0-9A-F]" : char2);
+                
+                const char3 = searchUpper.charAt(3);
+                regexPattern = regexPattern + (char3 === 'X' ? "[0-9A-F]" : char3);
+                
+                const char4 = searchUpper.charAt(4);
+                regexPattern = regexPattern + (char4 === 'X' ? "[0-9A-F]" : char4);
+                
+                const char5 = searchUpper.charAt(5);
+                regexPattern = regexPattern + (char5 === 'X' ? "[0-9A-F]" : char5);
+                
+                regexPattern = regexPattern + "$";
+                
+                const hexRegex = new RegExp(regexPattern);
+                const pieceHexClean = piece.hex.replace("#", "").toUpperCase();
+                
+                return hexRegex.test(pieceHexClean);
+            }
+            
+            // Normal search
+            const nameMatch = piece.nameLower.indexOf(searchLower) !== -1;
+            const hexMatch = piece.hexLower.indexOf(searchLower) !== -1;
+            const deltaMatch = piece.deltaString.indexOf(searchLower) !== -1;
             
             if (nameMatch || hexMatch || deltaMatch) {
                 return true;
             }
             
-            const matchMatch = piece.closestMatch.toLowerCase().indexOf(searchLower) !== -1;
+            const matchMatch = piece.matchLower.indexOf(searchLower) !== -1;
             if (matchMatch) {
                 return true;
             }
@@ -518,27 +734,36 @@ checkCustomColor(colorName) {
     }
     
     // Then apply hex search filter - ONLY if we have exactly 6 characters (full hex code)
-    if (this.hexSearchText && this.hexSearchText.length >= 6) {
-    const self = this;
+    if (this.hexSearchText && this.hexSearchText.length > 0) {
     const searchHex = this.hexSearchText.replace("#", "").toUpperCase();
     
-    // Only filter if we have exactly 6 hex digits
-    if (searchHex.length === 6) {
+    // Only filter if we have exactly 6 hex digits (not more, not less)
+    if (searchHex.length === 6 && /^[0-9A-F]{6}$/i.test(searchHex)) {
+        const self = this;
+        
+        // Check if search hex changed - clear old cache
+        if (!this.cachedHexSearch || this.cachedHexSearch.searchHex !== searchHex) {
+            this.cachedHexSearch = { searchHex: searchHex };
+        }
+        
+        // Filter and calculate deltaE only for pieces that pass text filter
         filtered = filtered.filter(function(piece) {
             if (!piece) return false;
             
-            // Calculate distance between search hex and piece hex
-            const distance = self.calculateColorDistance(searchHex, piece.hex);
+            // Calculate and cache deltaE for this piece if not already cached for this search
+            if (piece.cachedSearchHex !== searchHex) {
+                piece.cachedSearchHex = searchHex;
+                piece.cachedSearchDeltaE = self.calculateDeltaE(searchHex, piece.hex);
+                piece.cachedSearchDistance = self.calculateColorDistance(searchHex, piece.hex);
+            }
             
-            // Convert Manhattan distance to approximate deltaE
-            // Rough approximation: distance of ~36 ≈ deltaE of 5
-            const approximateDelta = distance / 7.2;
-            
-            return approximateDelta <= 5;
+            return piece.cachedSearchDeltaE <= 5;
         });
     }
 }
     
+    // Cache the result
+    this.cachedFilteredPieces = filtered;
     return filtered;
 }
 
@@ -692,13 +917,14 @@ Renderer.drawRect(Renderer.color(20, 20, 20, 180), 0, 0, width, height);
     // Title
     const title = "§l§nSeymour Database";
     const titleWidth = Renderer.getStringWidth(title);
-    Renderer.drawStringWithShadow(title, width / 2 - titleWidth / 2, 10);
+    Renderer.drawStringWithShadow(title, width / 2 - titleWidth / 2, 5);
     
     // Draw search box
     this.drawSearchBox();
     this.drawChecklistButton(width, 10);
     this.drawWordButton(width, height);
     this.drawPatternButton(width, height);
+    this.drawDupesButton(width, height);
     this.drawHexSearchBox();
 
     // Get filtered and sorted pieces
@@ -707,10 +933,23 @@ Renderer.drawRect(Renderer.color(20, 20, 20, 180), 0, 0, width, height);
     const totalCount = displayPieces.length;
     const allCount = this.allPieces.length;
     
-    // Info - moved to center under title
-    const info = "§7Total: §e" + allCount + " §7pieces" + (displayPieces.length !== allCount ? " §7(Filtered: §e" + displayPieces.length + "§7)" : "") + " | Scroll: §e" + this.scrollOffset;
-    const infoWidth = Renderer.getStringWidth(info);
-    Renderer.drawStringWithShadow(info, width / 2 - infoWidth / 2, 30);
+    // Draw total pieces count
+    const totalInfo = "§7Total: §e" + allCount + " §7pieces" + (displayPieces.length !== allCount ? " §7(Filtered: §e" + displayPieces.length + "§7)" : "");
+    const totalWidth = Renderer.getStringWidth(totalInfo);
+    Renderer.drawStringWithShadow(totalInfo, width / 2 - totalWidth / 2, 19);
+    
+    // Draw tier counter using cached counts - TWO ROWS
+    const tc = this.cachedTierCounts || { t1Normal: 0, t1Fade: 0, t2Normal: 0, t2Fade: 0, dupes: 0 };
+    
+    // First row: T1 and T2 (normal)
+    const row1Text = "§7T1: §c" + tc.t1Normal + "     §7T2: §6" + tc.t2Normal + "     §7Dupes: §d" + tc.dupes;
+    const row1Width = Renderer.getStringWidth(row1Text);
+    Renderer.drawStringWithShadow(row1Text, width / 2 - row1Width / 2, 30);
+    
+    // Second row: T1 Fade and T2 Fade
+    const row2Text = "§7T1 Fade: §9" + tc.t1Fade + "     §7T2 Fade: §e" + tc.t2Fade;
+    const row2Width = Renderer.getStringWidth(row2Text);
+    Renderer.drawStringWithShadow(row2Text, width / 2 - row2Width / 2, 40);
     
     if (totalCount === 0) {
         const noResultsMsg = this.searchText.length > 0 ? "§7No results for: §e" + this.searchText : "§7No pieces. Use §e/seymour scan start";
@@ -734,8 +973,8 @@ Renderer.drawRect(Renderer.color(20, 20, 20, 180), 0, 0, width, height);
     Renderer.drawStringWithShadow("§l§7Absolute" + absArrow, 630, headerY);
     
     // Only show Distance header when hex search is active with 6 digits
-const showDistance = this.hexSearchText && this.hexSearchText.replace("#", "").length === 6;
-if (showDistance) {
+    const showDistance = this.hexSearchText && this.hexSearchText.replace("#", "").length === 6;
+    if (showDistance) {
     const distanceArrow = this.sortColumn === "distance" ? (this.sortDirection === "asc" ? " §e↓" : " §e↑") : "";
     Renderer.drawStringWithShadow("§l§7Distance" + distanceArrow, 720, headerY);
 }
@@ -999,11 +1238,10 @@ if (this.isColorDark(piece.hex)) {
     Renderer.drawStringWithShadow("§7" + piece.absoluteDistance, 630, y + 4);
     
     // Distance from search target (only when hex search is active)
-const showDistance = this.hexSearchText && this.hexSearchText.replace("#", "").length === 6;
-if (showDistance) {
-    const searchHex = this.hexSearchText.replace("#", "").toUpperCase();
-    const rgbDistance = this.calculateColorDistance(searchHex, piece.hex);
-    const approximateDelta = rgbDistance / 7.2;
+    const showDistance = this.hexSearchText && this.hexSearchText.replace("#", "").length === 6;
+    if (showDistance) {
+    const rgbDistance = piece.cachedSearchDistance || 0;
+    const approximateDelta = piece.cachedSearchDeltaE || 0;
     
     // Determine highlight color based on deltaE
     let distanceHighlight = null;
@@ -1299,7 +1537,21 @@ if (showDistance) {
     }
 
 sortPieces(pieces) {
+        // Check if we can use cached sorted results
+        if (this.cachedSortedPieces && 
+            this.lastSortColumn === this.sortColumn && 
+            this.lastSortDirection === this.sortDirection &&
+            this.lastSearchText === this.searchText &&
+            this.lastHexSearchText === this.hexSearchText) {
+            return this.cachedSortedPieces;
+        }
+        
+        // Update cache keys
+        this.lastSortColumn = this.sortColumn;
+        this.lastSortDirection = this.sortDirection;
+        
         if (!this.sortColumn) {
+            this.cachedSortedPieces = pieces;
             return pieces;
         }
         
@@ -1312,26 +1564,27 @@ sortPieces(pieces) {
             let comparison = 0;
             
             if (self.sortColumn === "name") {
-    comparison = a.name.toLowerCase() < b.name.toLowerCase() ? -1 : (a.name.toLowerCase() > b.name.toLowerCase() ? 1 : 0);
+    comparison = a.nameLower < b.nameLower ? -1 : (a.nameLower > b.nameLower ? 1 : 0);
 } else if (self.sortColumn === "hex") {
     comparison = a.hex < b.hex ? -1 : (a.hex > b.hex ? 1 : 0);
 } else if (self.sortColumn === "match") {
-    comparison = a.closestMatch.toLowerCase() < b.closestMatch.toLowerCase() ? -1 : (a.closestMatch.toLowerCase() > b.closestMatch.toLowerCase() ? 1 : 0);
+    comparison = a.matchLower < b.matchLower ? -1 : (a.matchLower > b.matchLower ? 1 : 0);
 } else if (self.sortColumn === "deltaE") {
     comparison = a.deltaE < b.deltaE ? -1 : (a.deltaE > b.deltaE ? 1 : 0);
 } else if (self.sortColumn === "absolute") {
     comparison = a.absoluteDistance < b.absoluteDistance ? -1 : (a.absoluteDistance > b.absoluteDistance ? 1 : 0);
 } else if (self.sortColumn === "distance") {
-    // Calculate distance for both pieces
-    const searchHex = self.hexSearchText.replace("#", "").toUpperCase();
-    const distA = self.calculateColorDistance(searchHex, a.hex);
-    const distB = self.calculateColorDistance(searchHex, b.hex);
-    comparison = distA < distB ? -1 : (distA > distB ? 1 : 0);
+    // Use cached deltaE values
+    const deltaA = a.cachedSearchDeltaE || 0;
+    const deltaB = b.cachedSearchDeltaE || 0;
+    comparison = deltaA < deltaB ? -1 : (deltaA > deltaB ? 1 : 0);
 }
             
             return self.sortDirection === "asc" ? comparison : -comparison;
         });
         
+        // Cache the result
+        this.cachedSortedPieces = sorted;
         return sorted;
     }
     
@@ -1510,6 +1763,58 @@ drawPatternButton(screenWidth, screenHeight) {
     Renderer.drawRect(borderColor, buttonX + buttonWidth - 2, buttonY, 2, buttonHeight);
     
     const text = "§f§lPattern Matches";
+    const textWidth = Renderer.getStringWidth(text);
+    const textX = buttonX + (buttonWidth - textWidth) / 2;
+    
+    Renderer.drawStringWithShadow(text, textX, buttonY + 6);
+}
+toggleDupesFilter() {
+    this.showDupesOnly = !this.showDupesOnly;
+    this.scrollOffset = 0;
+    this.cachedFilteredPieces = null;
+    this.cachedSortedPieces = null;
+    
+    if (this.showDupesOnly) {
+        ChatLib.chat("§a[Seymour GUI] §7Showing §eduplicates only");
+    } else {
+        ChatLib.chat("§a[Seymour GUI] §7Showing §eall pieces");
+    }
+}
+
+drawDupesButton(screenWidth, screenHeight) {
+    const buttonWidth = 120;
+    const buttonHeight = 20;
+    const buttonX = 20;
+    const buttonY = screenHeight - 35;
+    
+    const Mouse = Java.type("org.lwjgl.input.Mouse");
+    const mc = Client.getMinecraft();
+    const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
+    const scale = scaledRes.func_78325_e();
+    const mouseX = Mouse.getX() / scale;
+    const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
+    
+    const isHovered = mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+                      mouseY >= buttonY && mouseY <= buttonY + buttonHeight;
+    
+    const bgColor = this.showDupesOnly ? 
+        Renderer.color(220, 20, 60, 200) : 
+        Renderer.color(169, 169, 169, 200);
+    const hoverColor = this.showDupesOnly ? 
+        Renderer.color(240, 40, 80, 220) : 
+        Renderer.color(189, 189, 189, 220);
+    
+    Renderer.drawRect(isHovered ? hoverColor : bgColor, buttonX, buttonY, buttonWidth, buttonHeight);
+    
+    const borderColor = this.showDupesOnly ?
+        Renderer.color(255, 99, 71, 255) :
+        Renderer.color(211, 211, 211, 255);
+    Renderer.drawRect(borderColor, buttonX, buttonY, buttonWidth, 2);
+    Renderer.drawRect(borderColor, buttonX, buttonY + buttonHeight - 2, buttonWidth, 2);
+    Renderer.drawRect(borderColor, buttonX, buttonY, 2, buttonHeight);
+    Renderer.drawRect(borderColor, buttonX + buttonWidth - 2, buttonY, 2, buttonHeight);
+    
+    const text = this.showDupesOnly ? "§f§lDupes: ON" : "§f§lShow Dupes";
     const textWidth = Renderer.getStringWidth(text);
     const textX = buttonX + (buttonWidth - textWidth) / 2;
     
