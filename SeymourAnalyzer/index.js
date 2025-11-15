@@ -48,7 +48,8 @@ const data = new PogObject("SeymourAnalyzer", {
   wordsEnabled: true,
   patternsEnabled: true,
   customColorsEnabled: true,
-  dupesEnabled: true
+  dupesEnabled: true,
+  showHighFades: false
 });
 
 const collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
@@ -154,7 +155,6 @@ setTimeout(function() {
       const top3Matches = [];
       if (piece.allMatches && piece.allMatches.length > 0) {
         const matchesArray = piece.allMatches;
-        
         // Process match 0
         if (matchesArray.length > 0) {
           const match0 = matchesArray[0];
@@ -408,6 +408,11 @@ function matchesSpecialPattern(hex) {
     return { type: "palindrome", pattern: hexUpper };
   }
   
+  // Pattern 4: AxBxCx (same first character in each pair)
+  if (r[0] === g[0] && g[0] === b[0]) {
+    return { type: "AxBxCx", pattern: hexUpper };
+  }
+
   return null;
 }
 
@@ -524,18 +529,18 @@ function colorMatchesPieceType(colorName, pieceType) {
   }
   
   // Check for explicit piece type matches
-  if (pieceType === "helmet" && (lowerName.includes("helmet") || lowerName.includes("helm"))) {
-    return true;
-  }
-  if (pieceType === "chestplate" && lowerName.includes("chestplate")) {
-    return true;
-  }
-  if (pieceType === "leggings" && lowerName.includes("leggings")) {
-    return true;
-  }
-  if (pieceType === "boots" && lowerName.includes("boots")) {
-    return true;
-  }
+if (pieceType === "helmet" && (lowerName.includes("helmet") || lowerName.includes("helm"))) {
+  return true;
+}
+if (pieceType === "chestplate" && lowerName.includes("chestplate")) {
+  return true;
+}
+if (pieceType === "leggings" && (lowerName.includes("leggings") || lowerName.includes("trousers"))) {
+  return true;
+}
+if (pieceType === "boots" && (lowerName.includes("boots") || lowerName.includes("shoes") || lowerName.includes("sneakers"))) {
+  return true;
+}
   
   // Check for combined pieces (e.g., "Chestplate+Boots")
   if (lowerName.includes("+")) {
@@ -746,6 +751,11 @@ function analyzeSeymourArmor(itemHex, itemName) {
         const tier = deltaE <= 1.0 ? 0 : (deltaE <= 2.0 ? 1 : (deltaE <= 5.0 ? 2 : 3));
         const priority = getPriorityScore(isFade, tier, isCustom);
         
+        if (isFade && deltaE > 2.0 && !data.showHighFades) {
+          // Dont show fade dyes worse than T2
+          continue;
+        }
+
         matches.push({
           name: name,
           targetHex: targetHex,
@@ -907,7 +917,9 @@ function setHoveredItemData(cacheData, uuid, itemName) {
   // Use passed UUID, or fallback to UUID stored in cacheData (from collection)
   const actualUuid = uuid || cacheData.collectionUuid || null;
   
-  const best = cacheData.analysis.bestMatch;
+  const analysis = cacheData.analysis;
+  let best = analysis.bestMatch;
+
   const itemRgb = hexToRgb(cacheData.itemHex);
   const targetRgb = hexToRgb(best.targetHex);
   
@@ -997,6 +1009,7 @@ function checkIfPieceOwnedByMatch(bestMatchName, itemHex, top3Matches, itemName)
     
     // Find which category this color belongs to
     let foundInCategory = null;
+    let stageIndex = -1;
     const categoryNames = Object.keys(armorGui.categories);
     
     for (let c = 0; c < categoryNames.length; c++) {
@@ -1006,6 +1019,7 @@ function checkIfPieceOwnedByMatch(bestMatchName, itemHex, top3Matches, itemName)
       for (let s = 0; s < stages.length; s++) {
         if (stages[s].name === bestMatchName) {
           foundInCategory = categoryName;
+          stageIndex = s;
           break;
         }
       }
@@ -1013,39 +1027,52 @@ function checkIfPieceOwnedByMatch(bestMatchName, itemHex, top3Matches, itemName)
       if (foundInCategory) break;
     }
     
-    if (!foundInCategory || !cache[foundInCategory]) {
+    if (!foundInCategory) {
       ownershipCache[cacheKey] = null;
       return null;
     }
     
+    // Check if category cache exists
     const categoryCache = cache[foundInCategory];
-    
-    // Find the target hex for this color name
-    let targetHex = null;
-    const stages = armorGui.categories[foundInCategory];
-    for (let s = 0; s < stages.length; s++) {
-      if (stages[s].name === bestMatchName) {
-        targetHex = stages[s].hex;
-        break;
-      }
-    }
-    
-    if (!targetHex || !categoryCache.matches || !categoryCache.matches[targetHex]) {
+    if (!categoryCache) {
       ownershipCache[cacheKey] = null;
       return null;
     }
     
-    const matchData = categoryCache.matches[targetHex];
-    
-    // Check if THIS SPECIFIC piece type has a piece assigned
-    const pieceData = matchData[hoveredPieceType];
-    
-    if (pieceData && pieceData !== null && pieceData.deltaE !== undefined) {
-      const tier = pieceData.deltaE <= 1.0 ? 0 : (pieceData.deltaE <= 2.0 ? 1 : 2);
+    // For FADE DYES: use stage index
+    if (isFade) {
+      if (!categoryCache.matchesByIndex || !categoryCache.matchesByIndex[stageIndex]) {
+        ownershipCache[cacheKey] = null;
+        return null;
+      }
       
-      const result = { tier: tier };
-      ownershipCache[cacheKey] = result;
-      return result;
+      const matchData = categoryCache.matchesByIndex[stageIndex];
+      const pieceData = matchData[hoveredPieceType];
+      
+      if (pieceData && pieceData !== null && pieceData.deltaE !== undefined) {
+        const tier = pieceData.deltaE <= 1.0 ? 0 : (pieceData.deltaE <= 2.0 ? 1 : 2);
+        const result = { tier: tier };
+        ownershipCache[cacheKey] = result;
+        return result;
+      }
+    } else {
+      // For NORMAL COLORS: use hex
+      const targetHex = armorGui.categories[foundInCategory][stageIndex].hex;
+      
+      if (!categoryCache.matches || !categoryCache.matches[targetHex]) {
+        ownershipCache[cacheKey] = null;
+        return null;
+      }
+      
+      const matchData = categoryCache.matches[targetHex];
+      const pieceData = matchData[hoveredPieceType];
+      
+      if (pieceData && pieceData !== null && pieceData.deltaE !== undefined) {
+        const tier = pieceData.deltaE <= 1.0 ? 0 : (pieceData.deltaE <= 2.0 ? 1 : 2);
+        const result = { tier: tier };
+        ownershipCache[cacheKey] = result;
+        return result;
+      }
     }
     
     // Cache null result
@@ -1144,21 +1171,24 @@ function scanChestContents() {
       if (collection[uuid]) continue;
       
       const loreRaw = item.getLore();
-      const hex = extractHexFromLore(loreRaw);
-      if (!hex) continue;
+      const itemHex = extractHexFromLore(loreRaw);
+      if (!itemHex) continue;
       
-      const analysis = analyzeSeymourArmor(hex, itemName);
+      // Store hex in a unique variable name to avoid any reference issues
+      const storedHex = "" + itemHex;
+      
+      const analysis = analyzeSeymourArmor(storedHex, itemName);
       if (!analysis) continue;
       
       const best = analysis.bestMatch;
-      const itemRgb = hexToRgb(hex);
+      const itemRgb = hexToRgb(storedHex);
       const targetRgb = hexToRgb(best.targetHex);
       const absoluteDist = Math.abs(itemRgb.r - targetRgb.r) + 
                            Math.abs(itemRgb.g - targetRgb.g) + 
                            Math.abs(itemRgb.b - targetRgb.b);
       
-      const wordMatch = matchesWordPattern(hex);
-      const specialPattern = matchesSpecialPattern(hex);
+      const wordMatch = matchesWordPattern(storedHex);
+      const specialPattern = matchesSpecialPattern(storedHex);
       
       // Store top 3 matches
 const top3Matches = [];
@@ -1181,7 +1211,7 @@ for (let m = 0; m < 3 && m < analysis.top3Matches.length; m++) {
 collection[uuid] = {
   pieceName: ChatLib.removeFormatting(itemName),
   uuid: uuid,
-  hexcode: hex,
+  hexcode: storedHex,
   specialPattern: specialPattern ? specialPattern.type : null,
   bestMatch: {
     colorName: best.name,
@@ -1937,8 +1967,13 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
       currentYOffset += 10;
     }
     if (data.patternsEnabled && infoData.specialPattern) {
-      const patternName = infoData.specialPattern.type === "paired" ? "PAIRED" : 
-                          (infoData.specialPattern.type === "repeating" ? "REPEATING" : "PALINDROME");
+      const rawType = infoData.specialPattern?.type;
+      const type = (typeof rawType === "string") ? rawType : (rawType && rawType.type) || "";
+
+      const patternName = type === "paired" ? "PAIRED" :
+                          (type === "repeating" ? "REPEATING" :
+                          (type === "palindrome" ? "PALINDROME" : "AxBxCx"));
+
       Renderer.drawStringWithShadow("§5§l★ PATTERN: " + patternName, boxX + 5, boxY + currentYOffset);
       currentYOffset += 10;
     }
@@ -1990,21 +2025,21 @@ register("postGuiRender", function(mouseX, mouseY, gui) {
       Renderer.drawStringWithShadow(tierText, boxX + 5, boxY + currentYOffset + 40);
       
       // Check if piece is owned in collection (at the bottom) - USE CACHED DATA
-      if (infoData.ownedPiece) {
-          let ownershipText;
-          // Use the BETTER tier between current piece and collection piece
-          const bestTier = Math.min(infoData.tier, infoData.ownedPiece.tier);
-          if (bestTier <= 1) {
-              ownershipText = "§a§l✓ Checklist";
-          } else if (bestTier === 2) {
-              ownershipText = "§e§l✓ Checklist";
-          } else {
-              ownershipText = "§7§l✓ Checklist";
-          }
-          Renderer.drawStringWithShadow(ownershipText, boxX + 5, boxY + currentYOffset + 50);
-      } else {
-          Renderer.drawStringWithShadow("§c§l✗ Checklist", boxX + 5, boxY + currentYOffset + 50);
-      }
+    if (infoData.ownedPiece) {
+    let ownershipText;
+    // Show the tier that's ACTUALLY in the checklist
+    const checklistTier = infoData.ownedPiece.tier;
+    if (checklistTier === 0 || checklistTier === 1) {
+        ownershipText = "§a§l✓ Checklist";
+    } else if (checklistTier === 2) {
+        ownershipText = "§e§l✓ Checklist";
+    } else {
+        ownershipText = "§7§l✓ Checklist";
+    }
+    Renderer.drawStringWithShadow(ownershipText, boxX + 5, boxY + currentYOffset + 50);
+    } else {
+    Renderer.drawStringWithShadow("§c§l✗ Checklist", boxX + 5, boxY + currentYOffset + 50);
+    }
 
       // Check for exact dupe hex - USE CACHED DATA
       if (infoData.dupeCheck) {
@@ -2324,10 +2359,11 @@ if (arg1 && arg1.toLowerCase() === "clear") {
       ChatLib.chat("§e/seymour rebuild words §7- Rebuild word matches");
       ChatLib.chat("§e/seymour rebuild analysis §7- Rebuild analysis with current toggles");
       ChatLib.chat("§e/seymour rebuild matches §7- Rebuild top 3 match data");
+      ChatLib.chat("§e/seymour rebuild pattern §7- Rebuild pattern data");
       ChatLib.chat("§8§m----------------------------------------------------");
       return;
     }
-    
+
     if (arg2.toLowerCase() === "words") {
     
     ChatLib.chat("§a[Seymour Analyzer] §7Preparing word rebuild...");
@@ -2496,7 +2532,48 @@ if (arg1 && arg1.toLowerCase() === "clear") {
       }, 10);
       return;
     }
-    
+
+    if (arg2.toLowerCase() === "pattern") {
+      ChatLib.chat("§a[Seymour Analyzer] §7Preparing pattern rebuild...");
+      setTimeout(function() {
+        const collectionKeys = Object.keys(collection);
+        let updatedCount = 0;
+
+        ChatLib.chat("§a[Seymour Analyzer] §7Starting pattern rebuild for §e" + collectionKeys.length + " §7pieces...");
+
+        function processPatternBatch(startIndex) {
+          const batchSize = 50;
+          const endIndex = Math.min(startIndex + batchSize, collectionKeys.length);
+          for (let i = startIndex; i < endIndex; i++) {
+            const uuid = collectionKeys[i];
+            const piece = collection[uuid];
+            if (piece && piece.hexcode) {
+              const patternInfo = matchesSpecialPattern(piece.hexcode);
+              piece.specialPattern = patternInfo;
+              updatedCount++;
+            }
+          }
+
+          if (endIndex < collectionKeys.length) {
+            if (endIndex % 500 === 0 || endIndex < 500) {
+              ChatLib.chat("§7Progress: §e" + endIndex + "§7/§e" + collectionKeys.length + " §7(§a" + Math.floor(endIndex/collectionKeys.length*100) + "%§7)");
+            }
+            setTimeout(function() { processPatternBatch(endIndex); }, 10);
+          } else {
+            ChatLib.chat("§7Saving and clearing caches...");
+            setTimeout(function() {
+              collection.save();
+              clearAllCaches();
+              ChatLib.chat("§a[Seymour Analyzer] §7Rebuilt pattern data for §e" + updatedCount + " §7pieces!");
+            }, 10);
+          }
+        }
+
+        processPatternBatch(0);
+      }, 10);
+      return;
+    }
+
     ChatLib.chat("§a[Seymour Analyzer] §cInvalid rebuild option! Use 'words', 'analysis', or 'matches'");
     return;
   }
@@ -2783,6 +2860,7 @@ if (arg1 && arg1.toLowerCase() === "clear") {
       ChatLib.chat("§e/seymour toggle pattern §7- Toggle pattern highlights §8[" + (data.patternsEnabled ? "§a✓" : "§c✗") + "§8]");
       ChatLib.chat("§e/seymour toggle custom §7- Toggle custom colors §8[" + (data.customColorsEnabled ? "§a✓" : "§c✗") + "§8]");
       ChatLib.chat("§e/seymour toggle dupes §7- Toggle dupe highlights §8[" + (data.dupesEnabled ? "§a✓" : "§c✗") + "§8]");
+      ChatLib.chat("§e/seymour toggle highfades §7- Toggle high fades §8[" + (data.showHighFades ? "§a✓" : "§c✗") + "§8]");
       ChatLib.chat("§8§m----------------------------------------------------");
       return;
     } else if (arg2.toLowerCase() === "infobox") {
@@ -2858,8 +2936,16 @@ if (arg1 && arg1.toLowerCase() === "clear") {
       
       ChatLib.chat("§a[Seymour Analyzer] §7Dupe highlights " + (data.dupesEnabled ? "§aenabled" : "§cdisabled") + "§7!");
       return;
+    } else if (arg2.toLowerCase() === "highfades") {
+      data.showHighFades = !data.showHighFades;
+      data.save();
+
+      clearAllCaches();
+
+      ChatLib.chat("§a[Seymour Analyzer] §7High fades " + (data.showHighFades ? "§aenabled" : "§cdisabled") + "§7!");
+      return;
     } else {
-      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour toggle <infobox|highlights|fade|3p|sets|words|pattern|custom|dupes>");
+      ChatLib.chat("§a[Seymour Analyzer] §cInvalid toggle option! §7(Available: infobox, highlights, fade, 3p, sets, words, pattern, custom, dupes, highfades)");
       return;
     }
   }
