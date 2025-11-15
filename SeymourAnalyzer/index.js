@@ -982,6 +982,8 @@ for (let i = 0; i < dupeKeys.length; i++) {
 hoveredItemData = null;
 }
 
+// Replace the entire checkIfPieceOwnedByMatch function in index.js (around line 800-900)
+
 // ===== CHECK IF PIECE IS OWNED IN COLLECTION =====
 function checkIfPieceOwnedByMatch(bestMatchName, itemHex, top3Matches, itemName) {
   if (!bestMatchName) return null;
@@ -998,6 +1000,100 @@ function checkIfPieceOwnedByMatch(bestMatchName, itemHex, top3Matches, itemName)
   }
   
   try {
+    // Normalize the color name by removing common suffixes/prefixes
+    const normalizeColorName = function(name) {
+      let normalized = name;
+      // Remove piece type indicators in parentheses
+      normalized = normalized.replace(/\s*\(Helmet\)/gi, "");
+      normalized = normalized.replace(/\s*\(Chestplate\)/gi, "");
+      normalized = normalized.replace(/\s*\(Leggings\)/gi, "");
+      normalized = normalized.replace(/\s*\(Boots\)/gi, "");
+      // Remove location indicators
+      normalized = normalized.replace(/\s*\(Rift\)/gi, "");
+      normalized = normalized.replace(/\s*\(Dungeon\)/gi, "");
+      // Remove combined piece indicators
+      normalized = normalized.replace(/\s*\+Boots/gi, "");
+      normalized = normalized.replace(/\s*\+Leggings/gi, "");
+      normalized = normalized.replace(/\s*\+Chestplate/gi, "");
+      normalized = normalized.replace(/\s*\+Helm/gi, "");
+      // Trim whitespace
+      normalized = normalized.trim();
+      return normalized;
+    };
+    
+    // NEW: Extract all possible color names from compound names
+    const extractColorVariants = function(name) {
+      const variants = [];
+      
+      // Always add the normalized base name
+      const normalized = normalizeColorName(name);
+      variants.push(normalized);
+      
+      // Handle "Name1+Name2" format (e.g., "Salmon Helm+Boots")
+      if (normalized.indexOf("+") !== -1) {
+        const parts = normalized.split("+");
+        const baseName = parts[0].trim();
+        
+        // Add piece-specific variants based on what pieces are in the compound name
+        if (normalized.toLowerCase().indexOf("helm") !== -1 && hoveredPieceType === "helmet") {
+          variants.push(baseName);
+        }
+        if (normalized.toLowerCase().indexOf("boots") !== -1 && hoveredPieceType === "boots") {
+          variants.push(baseName);
+        }
+        if (normalized.toLowerCase().indexOf("chestplate") !== -1 && hoveredPieceType === "chestplate") {
+          variants.push(baseName);
+        }
+        if (normalized.toLowerCase().indexOf("leggings") !== -1 && hoveredPieceType === "leggings") {
+          variants.push(baseName);
+        }
+      }
+      
+      // Handle "Name1 & Name2" format (e.g., "Shadow Assassin & Wither Armor")
+      if (normalized.indexOf("&") !== -1) {
+        const parts = normalized.split("&");
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i].trim();
+          if (part.length > 0) {
+            variants.push(part);
+          }
+        }
+      }
+      
+      // Handle "Name1/Name2/Name3" format (e.g., "Stone/Metal/Steel Chestplate")
+      if (normalized.indexOf("/") !== -1) {
+        const parts = normalized.split("/");
+        const lastPart = parts[parts.length - 1].trim();
+        
+        // Extract the piece type from the last part (e.g., "Steel Chestplate" -> "Chestplate")
+        let pieceTypeSuffix = "";
+        const lowerLast = lastPart.toLowerCase();
+        if (lowerLast.indexOf("chestplate") !== -1) pieceTypeSuffix = "Chestplate";
+        else if (lowerLast.indexOf("leggings") !== -1) pieceTypeSuffix = "Leggings";
+        else if (lowerLast.indexOf("boots") !== -1) pieceTypeSuffix = "Boots";
+        else if (lowerLast.indexOf("helm") !== -1) pieceTypeSuffix = "Helm";
+        
+        // Add each variant with the piece type suffix
+        for (let i = 0; i < parts.length; i++) {
+          let part = parts[i].trim();
+          
+          // Remove piece type from part if it exists
+          part = part.replace(/\s*(Chestplate|Leggings|Boots|Helm|Helmet)$/gi, "").trim();
+          
+          // Add the piece type suffix back if we found one
+          if (pieceTypeSuffix) {
+            variants.push(part + " " + pieceTypeSuffix);
+          } else {
+            variants.push(part);
+          }
+        }
+      }
+      
+      return variants;
+    };
+    
+    const colorVariants = extractColorVariants(bestMatchName);
+    
     // Check if this color is ACTUALLY filled in the ArmorChecklist
     const isFade = isFadeDye(bestMatchName);
     const cache = isFade ? armorGui.fadeDyeOptimalCache : armorGui.normalColorCache;
@@ -1007,21 +1103,32 @@ function checkIfPieceOwnedByMatch(bestMatchName, itemHex, top3Matches, itemName)
       return null;
     }
     
-    // Find which category this color belongs to
+    // Find which category this color belongs to (with normalized name matching)
     let foundInCategory = null;
     let stageIndex = -1;
     const categoryNames = Object.keys(armorGui.categories);
     
-    for (let c = 0; c < categoryNames.length; c++) {
-      const categoryName = categoryNames[c];
-      const stages = armorGui.categories[categoryName];
+    // Try each color variant
+    for (let v = 0; v < colorVariants.length; v++) {
+      const variant = colorVariants[v];
       
-      for (let s = 0; s < stages.length; s++) {
-        if (stages[s].name === bestMatchName) {
-          foundInCategory = categoryName;
-          stageIndex = s;
-          break;
+      for (let c = 0; c < categoryNames.length; c++) {
+        const categoryName = categoryNames[c];
+        const stages = armorGui.categories[categoryName];
+        
+        for (let s = 0; s < stages.length; s++) {
+          const stageName = stages[s].name;
+          const normalizedStageName = normalizeColorName(stageName);
+          
+          // Compare normalized names
+          if (normalizedStageName === variant || normalizedStageName.indexOf(variant) !== -1 || variant.indexOf(normalizedStageName) !== -1) {
+            foundInCategory = categoryName;
+            stageIndex = s;
+            break;
+          }
         }
+        
+        if (foundInCategory) break;
       }
       
       if (foundInCategory) break;
