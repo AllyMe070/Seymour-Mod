@@ -133,7 +133,7 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     categories["Farming"].push({hex: "EDAA36", name: "Pumpkin Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Farming"].push({hex: "00FF00", name: "Cactus", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Farming"].push({hex: "CC5500", name: "Farmers Boots", pieces: ["boots"]});
-    categories["Farming"].push({hex: "000000", name: "Ranchers", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "000000", name: "Ranchers", pieces: ["boots"]});
     
     // === FISHING ===
     categories["Fishing"].push({hex: "6F0F08", name: "Magma Lord 3p", pieces: ["chestplate", "leggings", "boots"]});
@@ -268,6 +268,21 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     categories["Other In-Game Dyes"].push({hex: "E7413C", name: "Necron Dye", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     
     // === FAIRY ===
+    categories["Fairy"].push({hex: "330066", name: "Fairy - 330066", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "4C0099", name: "Fairy - 4C0099", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "6600CC", name: "Fairy - 6600CC", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "7F00FF", name: "Fairy - 7F00FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "9933FF", name: "Fairy - 9933FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "B266FF", name: "Fairy - B266FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "CC99FF", name: "Fairy - CC99FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "E5CCFF", name: "Fairy - E5CCFF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "FFCCFF", name: "Fairy - FFCCFF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "FF99FF", name: "Fairy - FF99FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "FF66FF", name: "Fairy - FF66FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "FF33FF", name: "Fairy - FF33FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "FF00FF", name: "Fairy - FF00FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "CC00CC", name: "Fairy - CC00CC", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fairy"].push({hex: "990099", name: "Fairy - 990099", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Fairy"].push({hex: "660066", name: "Fairy - 660066", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Fairy"].push({hex: "660033", name: "Fairy - 660033", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Fairy"].push({hex: "99004C", name: "Fairy - 99004C", pieces: ["helmet", "chestplate", "leggings", "boots"]});
@@ -277,20 +292,6 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     categories["Fairy"].push({hex: "FF66B2", name: "Fairy - FF66B2", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Fairy"].push({hex: "FF99CC", name: "Fairy - FF99CC", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Fairy"].push({hex: "FFCCE5", name: "Fairy - FFCCE5", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "990099", name: "Fairy - 990099", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "CC00CC", name: "Fairy - CC00CC", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "FF33FF", name: "Fairy - FF33FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "FF66FF", name: "Fairy - FF66FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "FF99FF", name: "Fairy - FF99FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "FFCCFF", name: "Fairy - FFCCFF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "E5CCFF", name: "Fairy - E5CCFF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "CC99FF", name: "Fairy - CC99FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "B266FF", name: "Fairy - B266FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "9933FF", name: "Fairy - 9933FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "7F00FF", name: "Fairy - 7F00FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "6600CC", name: "Fairy - 6600CC", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "4C0099", name: "Fairy - 4C0099", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Fairy"].push({hex: "330066", name: "Fairy - 330066", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     
     // === CRYSTAL ===
     categories["Crystal"].push({hex: "FCF3FF", name: "Crystal - FCF3FF", pieces: ["helmet", "chestplate", "leggings", "boots"]});
