@@ -250,7 +250,7 @@ export const TARGET_COLORS = {
   "Leaflet 3p": "4DCC4D",
   "Biohazard 3p": "FFAC00",
   "Miners/Prospecting": "7A7964",
-  "Farm Armour/Elanor's Set (Rift)": "FFD700",
+  "Farm Armour/Eleanor's Set (Rift)": "FFD700",
   "Goblin 3p": "37B042",
   "Growth Armour": "00BE00",
   "Heat Armour": "B3B3B3",
