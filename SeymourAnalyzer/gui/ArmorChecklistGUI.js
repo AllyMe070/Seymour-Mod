@@ -32,6 +32,7 @@ this.matchCache = this.cacheStorage.matchCache;
 this.fadeDyeOptimalCache = this.cacheStorage.fadeDyeOptimalCache;
 this.normalColorCache = this.cacheStorage.normalColorCache || {};
 this.collectionSize = this.cacheStorage.collectionSize;
+this.cachedStats = null;
     
     // Cache for optimization (LAB conversions - don't need to persist)
     this.labCache = {};
@@ -40,6 +41,10 @@ this.collectionSize = this.cacheStorage.collectionSize;
     this.categories = this.buildCategoriesFromDatabase();
         
         this.normalPageOrder = [
+    "Farming",
+    "Fishing",
+    "Kuudra",
+    "White-Black",
     "Pure Colors",
     "Exo Pure Dyes",
     "Other In-Game Dyes",
@@ -76,6 +81,10 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
 
     buildCategoriesFromDatabase() {
     const categories = {
+    "Farming": [],
+    "Fishing": [],
+    "Kuudra": [],
+    "White-Black": [],
     "Pure Colors": [],
     "Exo Pure Dyes": [],
     "Other In-Game Dyes": [],
@@ -103,6 +112,90 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     "Sunset": [],
     "Warden": []
 };
+    
+    // === FARMING ===
+    categories["Farming"].push({hex: "FFFF00", name: "Farm Suit", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "FFD700", name: "Farm Armor", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "E0FCF7", name: "Speedster", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "CBD2DB", name: "Rabbit Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "899E20", name: "Melon Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "7A2900", name: "Cropie Chestplate", pieces: ["chestplate"]});
+    categories["Farming"].push({hex: "94451F", name: "Cropie Leggings", pieces: ["leggings"]});
+    categories["Farming"].push({hex: "BB6535", name: "Cropie Boots", pieces: ["boots"]});
+    categories["Farming"].push({hex: "03430E", name: "Squash Chestplate", pieces: ["chestplate"]});
+    categories["Farming"].push({hex: "0C4A16", name: "Squash Leggings", pieces: ["leggings"]});
+    categories["Farming"].push({hex: "13561E", name: "Squash Boots", pieces: ["boots"]});
+    categories["Farming"].push({hex: "58890C", name: "Fermento Chestplate", pieces: ["chestplate"]});
+    categories["Farming"].push({hex: "6A9C1B", name: "Fermento Leggings", pieces: ["leggings"]});
+    categories["Farming"].push({hex: "83B03B", name: "Fermento Boots", pieces: ["boots"]});
+    categories["Farming"].push({hex: "FF0000", name: "Mushroom", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "FFAC00", name: "Biohazard 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "EDAA36", name: "Pumpkin Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "00FF00", name: "Cactus", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Farming"].push({hex: "CC5500", name: "Farmers Boots", pieces: ["boots"]});
+    categories["Farming"].push({hex: "000000", name: "Ranchers", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    
+    // === FISHING ===
+    categories["Fishing"].push({hex: "6F0F08", name: "Magma Lord 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "0E666D", name: "Abyssal Armor 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "24DDE5", name: "Thunder 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "002CA6", name: "Shark Scale Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "FC2F3C", name: "Nutcracker Chestplate", pieces: ["chestplate"]});
+    categories["Fishing"].push({hex: "FFF9EB", name: "Nutcracker Leggings", pieces: ["leggings"]});
+    categories["Fishing"].push({hex: "46343A", name: "Nutcracker Boots", pieces: ["boots"]});
+    categories["Fishing"].push({hex: "017D31", name: "Backwater 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "0B004F", name: "Angler 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "A06540", name: "Trophy Hunter", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "FFDC51", name: "Sponge 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "C13C0F", name: "Salmon Helm", pieces: ["helmet"]});
+    categories["Fishing"].push({hex: "A82B76", name: "Salmon Chestplate", pieces: ["chestplate"]});
+    categories["Fishing"].push({hex: "A82B76", name: "Salmon Leggings", pieces: ["leggings"]});
+    categories["Fishing"].push({hex: "C13C0F", name: "Salmon Boots", pieces: ["boots"]});
+    categories["Fishing"].push({hex: "ED6612", name: "Flaming Chestplate", pieces: ["chestplate"]});
+    categories["Fishing"].push({hex: "CE2C2C", name: "Moogma Leggings", pieces: ["leggings"]});
+    categories["Fishing"].push({hex: "276114", name: "Slug Boots", pieces: ["boots"]});
+    categories["Fishing"].push({hex: "117391", name: "Guardian Chestplate", pieces: ["chestplate"]});
+    categories["Fishing"].push({hex: "04CFD3", name: "Stereo Pants", pieces: ["leggings"]});
+    categories["Fishing"].push({hex: "000000", name: "Squid Boots", pieces: ["boots"]});
+    categories["Fishing"].push({hex: "10616E", name: "Sea Walker 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "101555", name: "Water Hydra 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Fishing"].push({hex: "990D00", name: "Sea Emperor/Loch Emperor 3p", pieces: ["chestplate", "leggings", "boots"]});
+
+       // === KUUDRA ===
+    categories["Kuudra"].push({hex: "3E05AF", name: "Terror Chestplate", pieces: ["chestplate"]});
+    categories["Kuudra"].push({hex: "5D23D1", name: "Terror Leggings", pieces: ["leggings"]});
+    categories["Kuudra"].push({hex: "7C44EC", name: "Terror Boots", pieces: ["boots"]});
+    categories["Kuudra"].push({hex: "2841F1", name: "Aurora Chestplate", pieces: ["chestplate"]});
+    categories["Kuudra"].push({hex: "3F56FB", name: "Aurora Leggings", pieces: ["leggings"]});
+    categories["Kuudra"].push({hex: "6184FC", name: "Aurora Boots", pieces: ["boots"]});
+    categories["Kuudra"].push({hex: "FFCB0D", name: "Hollow Chestplate", pieces: ["chestplate"]});
+    categories["Kuudra"].push({hex: "FFF6A3", name: "Hollow Leggings", pieces: ["leggings"]});
+    categories["Kuudra"].push({hex: "E3FFFA", name: "Hollow Boots", pieces: ["boots"]});
+    categories["Kuudra"].push({hex: "FF6F0C", name: "Crimson Chestplate", pieces: ["chestplate"]});
+    categories["Kuudra"].push({hex: "E66105", name: "Crimson Leggings", pieces: ["leggings"]});
+    categories["Kuudra"].push({hex: "E65300", name: "Crimson Boots", pieces: ["boots"]});
+    categories["Kuudra"].push({hex: "F04729", name: "Fervor Chestplate", pieces: ["chestplate"]});
+    categories["Kuudra"].push({hex: "17BF89", name: "Fervor Leggings", pieces: ["leggings"]});
+    categories["Kuudra"].push({hex: "07A674", name: "Fervor Boots", pieces: ["boots"]});
+    categories["Kuudra"].push({hex: "35530A", name: "Kuudra Follower 3p", pieces: ["chestplate", "leggings", "boots"]});
+
+    // === WHITE-BLACK ===
+    categories["White-Black"].push({hex: "000000", name: "Pure Black", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "111111", name: "Gray 1", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "222222", name: "Gray 2", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "333333", name: "Gray 3", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "444444", name: "Gray 4", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "555555", name: "Gray 5", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "666666", name: "Gray 6", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "777777", name: "Gray 7", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "888888", name: "Gray 8", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "999999", name: "Gray 9", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "AAAAAA", name: "Gray 10", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "BBBBBB", name: "Gray 11", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "CCCCCC", name: "Gray 12", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "DDDDDD", name: "Gray 13", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "EEEEEE", name: "Gray 14", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["White-Black"].push({hex: "FFFFFF", name: "Pure White", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     
     // === PURE COLORS ===
     categories["Pure Colors"].push({hex: "00FF00", name: "Pure Green", pieces: ["helmet", "chestplate", "leggings", "boots"]});
@@ -221,7 +314,8 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     categories["Dragon Armor"].push({hex: "D91E41", name: "Strong Dragon Chestplate", pieces: ["chestplate"]});
     categories["Dragon Armor"].push({hex: "E09419", name: "Strong Dragon Leggings", pieces: ["leggings"]});
     categories["Dragon Armor"].push({hex: "F0D124", name: "Strong Dragon Boots", pieces: ["boots"]});
-    categories["Dragon Armor"].push({hex: "F2DF11", name: "Superior Dragon Chestplate+Leggings", pieces: ["chestplate", "leggings"]});
+    categories["Dragon Armor"].push({hex: "F2DF11", name: "Superior Dragon Chestplate", pieces: ["chestplate"]});
+    categories["Dragon Armor"].push({hex: "F2DF11", name: "Superior Dragon Leggings", pieces: ["leggings"]});
     categories["Dragon Armor"].push({hex: "F25D18", name: "Superior Dragon Boots", pieces: ["boots"]});
     categories["Dragon Armor"].push({hex: "47D147", name: "Holy Dragon 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Dragon Armor"].push({hex: "F0E6AA", name: "Old Dragon 3p", pieces: ["chestplate", "leggings", "boots"]});
@@ -231,21 +325,27 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     categories["Dragon Armor"].push({hex: "DDE4F0", name: "Young Dragon 3p", pieces: ["chestplate", "leggings", "boots"]});
     
     // === DUNGEON ARMOR ===
-    categories["Dungeon Armor"].push({hex: "9E7003", name: "Rotten Helm+Boots", pieces: ["helmet", "boots"]});
-    categories["Dungeon Armor"].push({hex: "017D31", name: "Rotten Chestplate+Leggings / Backwater 3p", pieces: ["chestplate", "leggings"]});
-    categories["Dungeon Armor"].push({hex: "ADFF2F", name: "Bouncy Armour", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Dungeon Armor"].push({hex: "828282", name: "Heavy Chestplate+Leggings", pieces: ["chestplate", "leggings"]});
+    categories["Dungeon Armor"].push({hex: "9E7003", name: "Rotten Helm", pieces: ["helmet"]});
+    categories["Dungeon Armor"].push({hex: "017D31", name: "Rotten Chestplate", pieces: ["chestplate"]});
+    categories["Dungeon Armor"].push({hex: "017D31", name: "Rotten Leggings", pieces: ["leggings"]});
+    categories["Dungeon Armor"].push({hex: "9E7003", name: "Rotten Boots", pieces: ["boots"]});
+    categories["Dungeon Armor"].push({hex: "ADFF2F", name: "Bouncy Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Dungeon Armor"].push({hex: "828282", name: "Heavy Chestplate", pieces: ["chestplate"]});
+    categories["Dungeon Armor"].push({hex: "828282", name: "Heavy Leggings", pieces: ["leggings"]});
     categories["Dungeon Armor"].push({hex: "E1EB34", name: "Skeleton Grunt", pieces: ["chestplate", "leggings", "boots"]});
     categories["Dungeon Armor"].push({hex: "FF6B0B", name: "Skeleton Master", pieces: ["chestplate", "leggings", "boots"]});
     categories["Dungeon Armor"].push({hex: "FFBC0B", name: "Skeleton Soldier", pieces: ["chestplate", "leggings", "boots"]});
     categories["Dungeon Armor"].push({hex: "268105", name: "Skeleton Lord Armor 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Dungeon Armor"].push({hex: "D51230", name: "Zombie Commander", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Dungeon Armor"].push({hex: "D07F00", name: "Zombie Soldier", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Dungeon Armor"].push({hex: "D51230", name: "Zombie Commander", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Dungeon Armor"].push({hex: "D07F00", name: "Zombie Soldier", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Dungeon Armor"].push({hex: "9B01C1", name: "Zombie Lord Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Dungeon Armor"].push({hex: "E6E6E6", name: "Super Heavy Helm+Boots", pieces: ["helmet", "boots"]});
-    categories["Dungeon Armor"].push({hex: "5A6464", name: "Super Heavy Chestplate+Leggings", pieces: ["chestplate", "leggings"]});
+    categories["Dungeon Armor"].push({hex: "E6E6E6", name: "Super Heavy Helm", pieces: ["helmet"]});
+    categories["Dungeon Armor"].push({hex: "5A6464", name: "Super Heavy Chestplate", pieces: ["chestplate"]});
+    categories["Dungeon Armor"].push({hex: "5A6464", name: "Super Heavy Leggings", pieces: ["leggings"]});
+    categories["Dungeon Armor"].push({hex: "E6E6E6", name: "Super Heavy Boots", pieces: ["boots"]});
     categories["Dungeon Armor"].push({hex: "BFBCB2", name: "Adaptive Armour (Outside Dungeon) 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Dungeon Armor"].push({hex: "000000", name: "Shadow Assassin & Wither Armor", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Dungeon Armor"].push({hex: "000000", name: "Shadow Assassin 3p", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Dungeon Armor"].push({hex: "000000", name: "Wither Armor 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Dungeon Armor"].push({hex: "370147", name: "Necromancer Lord Leggings", pieces: ["leggings"]});
     categories["Dungeon Armor"].push({hex: "400352", name: "Necromancer Lord Boots", pieces: ["boots"]});
     categories["Dungeon Armor"].push({hex: "45413C", name: "Goldor Chestplate", pieces: ["chestplate"]});
@@ -262,73 +362,56 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     categories["Dungeon Armor"].push({hex: "8969C8", name: "Maxor Boots", pieces: ["boots"]});
     
     // === RIFT ARMOR ===
-    categories["Rift Armor"].push({hex: "35B73B", name: "Wyld Leggings (Rift)", pieces: ["leggings"]});
-    categories["Rift Armor"].push({hex: "154918", name: "Wyld Boots (Rift)", pieces: ["boots"]});
-    categories["Rift Armor"].push({hex: "FF4600", name: "Orange Chestplate (Rift)", pieces: ["chestplate"]});
-    categories["Rift Armor"].push({hex: "FFF200", name: "Chicken Leggings (Rift)", pieces: ["leggings"]});
-    categories["Rift Armor"].push({hex: "48FF00", name: "Femurgrowth Leggings (Rift)", pieces: ["leggings"]});
-    categories["Rift Armor"].push({hex: "380024", name: "Exceedingly Comfy Sneakers (Rift)", pieces: ["boots"]});
-    categories["Rift Armor"].push({hex: "0C0C96", name: "Burned Pants (Rift)", pieces: ["leggings"]});
-    categories["Rift Armor"].push({hex: "FFD700", name: "Farm Armour/Elanor's Set (Rift)", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Rift Armor"].push({hex: "35B73B", name: "Wyld Leggings", pieces: ["leggings"]});
+    categories["Rift Armor"].push({hex: "154918", name: "Wyld Boots", pieces: ["boots"]});
+    categories["Rift Armor"].push({hex: "FF4600", name: "Orange Chestplate", pieces: ["chestplate"]});
+    categories["Rift Armor"].push({hex: "FFF200", name: "Chicken Leggings", pieces: ["leggings"]});
+    categories["Rift Armor"].push({hex: "48FF00", name: "Femurgrowth Leggings", pieces: ["leggings"]});
+    categories["Rift Armor"].push({hex: "0C0C96", name: "Burned Pants", pieces: ["leggings"]});
+    categories["Rift Armor"].push({hex: "993333", name: "Leggings of the Coven", pieces: ["leggings"]});
+    categories["Rift Armor"].push({hex: "993333", name: "Wizardman Leggings", pieces: ["leggings"]});
+    categories["Rift Armor"].push({hex: "4F2886", name: "Gunthers Sneakers", pieces: ["boots"]});
+    categories["Rift Armor"].push({hex: "380024", name: "Exceedingly Comfy Sneakers", pieces: ["boots"]});
+    categories["Rift Armor"].push({hex: "1A004C", name: "Snake-in-a-boot", pieces: ["boots"]});
+    categories["Rift Armor"].push({hex: "3333FF", name: "Ugly Boots", pieces: ["boots"]});
+    categories["Rift Armor"].push({hex: "FFD700", name: "Eleanor's Set", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     
     // === OTHER ARMOR (Part 1 of 3) ===
-    categories["Other Armor"].push({hex: "7C3756", name: "Challenger's Leggings+Boots", pieces: ["leggings", "boots"]});
-    categories["Other Armor"].push({hex: "2A5B48", name: "Mythos Leggings+Boots", pieces: ["leggings", "boots"]});
+    categories["Other Armor"].push({hex: "7C3756", name: "Challenger's Leggings", pieces: ["leggings"]});
+    categories["Other Armor"].push({hex: "7C3756", name: "Challenger's Boots", pieces: ["boots"]});
+    categories["Other Armor"].push({hex: "2A5B48", name: "Mythos Leggings", pieces: ["leggings"]});
+    categories["Other Armor"].push({hex: "2A5B48", name: "Mythos Boots", pieces: ["boots"]});
     categories["Other Armor"].push({hex: "8D3592", name: "Melody Shoes", pieces: ["boots"]});
     categories["Other Armor"].push({hex: "586158", name: "Fallen Star 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "F6DE51", name: "Charlie's Trousers", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "E0FCF7", name: "Speedster Set/Mercenary Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "450101", name: "Crypt Witherlord", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "993399", name: "Great Spook", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "CBD2DB", name: "Rabbit Armour", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "C83200", name: "Yog Armour", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "EDAA36", name: "Pumpkin Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "FF9300", name: "Armour of Magma", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Other Armor"].push({hex: "450101", name: "Crypt Witherlord", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Other Armor"].push({hex: "993399", name: "Great Spook", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Other Armor"].push({hex: "C83200", name: "Yog Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Other Armor"].push({hex: "FF9300", name: "Armour of Magma", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "006633", name: "Canopy Chestplate", pieces: ["chestplate"]});
     categories["Other Armor"].push({hex: "006600", name: "Canopy Leggings", pieces: ["leggings"]});
     categories["Other Armor"].push({hex: "331900", name: "Canopy Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "ED6612", name: "Flaming Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "CE2C2C", name: "Moogma Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "276114", name: "Slug Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "117391", name: "Guardian Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "7AE82C", name: "Creeper Pants (Leggings)", pieces: ["leggings"]});
+    categories["Other Armor"].push({hex: "7AE82C", name: "Creeper Pants", pieces: ["leggings"]});
     categories["Other Armor"].push({hex: "FFA33B", name: "Berserker Chestplate", pieces: ["chestplate"]});
     categories["Other Armor"].push({hex: "FFB727", name: "Berserker Leggings", pieces: ["leggings"]});
     categories["Other Armor"].push({hex: "FFD427", name: "Berserker Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "383838", name: "Cheap Tux Chestplate+Boots", pieces: ["chestplate", "boots"]});
     categories["Other Armor"].push({hex: "C7C7C7", name: "Cheap Tux Leggings", pieces: ["leggings"]});
+    categories["Other Armor"].push({hex: "383838", name: "Cheap Tux Chestplate", pieces: ["chestplate"]});
+    categories["Other Armor"].push({hex: "383838", name: "Cheap Tux Boots", pieces: ["boots"]});
     categories["Other Armor"].push({hex: "DEBC15", name: "Rising Sun Leggings", pieces: ["leggings"]});
     categories["Other Armor"].push({hex: "9F8609", name: "Rising Sun Boots", pieces: ["boots"]});
     categories["Other Armor"].push({hex: "FEFDFC", name: "Elegant Tux Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "332A2A", name: "Fancy Tux Chestplate+Boots", pieces: ["chestplate", "boots"]});
+    categories["Other Armor"].push({hex: "332A2A", name: "Fancy Tux Chestplate", pieces: ["chestplate"]});
+    categories["Other Armor"].push({hex: "332A2A", name: "Fancy Tux Boots", pieces: ["boots"]});
     
     // === OTHER ARMOR (Part 2 of 3) ===
     categories["Other Armor"].push({hex: "D4D4D4", name: "Fancy Tux Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "0A0011", name: "Final Destination Chestplate+Boots", pieces: ["chestplate", "boots"]});
+    categories["Other Armor"].push({hex: "0A0011", name: "Final Destination Chestplate", pieces: ["chestplate"]});
     categories["Other Armor"].push({hex: "FF75FF", name: "Final Destination Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "FC2F3C", name: "Nutcracker Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "FFF9EB", name: "Nutcracker Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "46343A", name: "Nutcracker Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "2841F1", name: "Aurora Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "3F56FB", name: "Aurora Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "6184FC", name: "Aurora Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "FF6F0C", name: "Crimson Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "E66105", name: "Crimson Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "E65300", name: "Crimson Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "F04729", name: "Fervor Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "17BF89", name: "Fervor Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "07A674", name: "Fervor Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "FFCB0D", name: "Hollow Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "FFF6A3", name: "Hollow Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "E3FFFA", name: "Hollow Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "3E05AF", name: "Terror Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "5D23D1", name: "Terror Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "7C44EC", name: "Terror Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "D9D9D9", name: "Stone/Metal/Steel Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "04CFD3", name: "Stereo Pants (Leggings)", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "CC5500", name: "Farmers Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "4F2886", name: "Gunthers Sneakers (Boots)", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "1A004C", name: "Snake-in-a-boot (Boots)", pieces: ["boots"]});
+    categories["Other Armor"].push({hex: "0A0011", name: "Final Destination Boots", pieces: ["boots"]});
+    categories["Other Armor"].push({hex: "D9D9D9", name: "Stone Chestplate", pieces: ["chestplate"]});
+    categories["Other Armor"].push({hex: "D9D9D9", name: "Metal Chestplate", pieces: ["chestplate"]});
+    categories["Other Armor"].push({hex: "D9D9D9", name: "Steel Chestplate", pieces: ["chestplate"]});
     categories["Other Armor"].push({hex: "BFBFBF", name: "Spirit Boots", pieces: ["boots"]});
     
     // === OTHER ARMOR (Part 3 of 3) ===
@@ -337,55 +420,33 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     categories["Other Armor"].push({hex: "FF8EDE", name: "Celeste Chestplate", pieces: ["chestplate"]});
     categories["Other Armor"].push({hex: "FF8ECA", name: "Celeste Leggings", pieces: ["leggings"]});
     categories["Other Armor"].push({hex: "FF8EB6", name: "Celeste Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "D400FF", name: "Starlight Chestplate+Boots", pieces: ["chestplate", "boots"]});
-    categories["Other Armor"].push({hex: "7A2900", name: "Cropie Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "94451F", name: "Cropie Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "BB6535", name: "Cropie Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "03430E", name: "Squash Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "0C4A16", name: "Squash Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "13561E", name: "Squash Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "58890C", name: "Fermento Chestplate", pieces: ["chestplate"]});
-    categories["Other Armor"].push({hex: "6A9C1B", name: "Fermento Leggings", pieces: ["leggings"]});
-    categories["Other Armor"].push({hex: "83B03B", name: "Fermento Boots", pieces: ["boots"]});
+    categories["Other Armor"].push({hex: "D400FF", name: "Starlight Chestplate", pieces: ["chestplate"]});
+    categories["Other Armor"].push({hex: "D400FF", name: "Starlight Boots", pieces: ["boots"]});
     categories["Other Armor"].push({hex: "808080", name: "Ghostly Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "3333FF", name: "Ugly Boots", pieces: ["boots"]});
-    categories["Other Armor"].push({hex: "C13C0F", name: "Salmon Helm+Boots", pieces: ["helmet", "boots"]});
-    categories["Other Armor"].push({hex: "A82B76", name: "Salmon Chestplate+Leggings", pieces: ["chestplate", "leggings"]});
-    categories["Other Armor"].push({hex: "FF0A0A", name: "Minos Hunter Chestplate+Leggings", pieces: ["chestplate", "leggings"]});
+    categories["Other Armor"].push({hex: "FF0A0A", name: "Minos Hunter Chestplate", pieces: ["chestplate"]});
+    categories["Other Armor"].push({hex: "FF0A0A", name: "Minos Hunter Leggings", pieces: ["leggings"]});
     categories["Other Armor"].push({hex: "304B4E", name: "Minos Hunter Boots", pieces: ["boots"]});
     categories["Other Armor"].push({hex: "0E1736", name: "Primordial Armor 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "7A4120", name: "Kelly Quest Armor 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "1C9759", name: "Fig Armor 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "0E666D", name: "Abyssal Armor 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "0B004F", name: "Angler 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "4DCC4D", name: "Leaflet 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "FFAC00", name: "Biohazard 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "7A7964", name: "Miners/Prospecting", pieces: ["helmet", "chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "FFD700", name: "Farm Armour/Elanor's Set (Rift)", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Other Armor"].push({hex: "7A7964", name: "Miners Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Other Armor"].push({hex: "7A7964", name: "Prospecting Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "37B042", name: "Goblin 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "00BE00", name: "Growth Armour", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "B3B3B3", name: "Heat Armour", pieces: ["chestplate", "leggings", "boots"]});
+    categories["Other Armor"].push({hex: "00BE00", name: "Growth Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
+    categories["Other Armor"].push({hex: "B3B3B3", name: "Heat Armour", pieces: ["helmet", "chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "DF2E06", name: "Rampart 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "07031B", name: "Shimmering Light 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "8B0000", name: "Arachne Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "F7DA33", name: "Blaze Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "03FCF8", name: "Glacite 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "CCE5FF", name: "Mineral Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "FFDC51", name: "Sponge 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "606060", name: "Spooky Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "24DDE5", name: "Thunder 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "A0DAEF", name: "Frozen Blaze 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "5B0DAE", name: "Glossy Mineral Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "6F0F08", name: "Magma Lord 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "1B1B1B", name: "Reaper Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "002CA6", name: "Shark Scale Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "1D1105", name: "Werewolf 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "35530A", name: "Kuudra Follower 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "899E20", name: "Melon Armour 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "10616E", name: "Sea Walker 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "990D00", name: "Sea Emperor/Loch Emperor 3p", pieces: ["chestplate", "leggings", "boots"]});
     categories["Other Armor"].push({hex: "3588FF", name: "Vanguard 3p", pieces: ["chestplate", "leggings", "boots"]});
-    categories["Other Armor"].push({hex: "101555", name: "Water Hydra 3p", pieces: ["chestplate", "leggings", "boots"]});
     // === FADE DYES ===
     
     // Aurora
@@ -614,6 +675,8 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     this.drawFilterButton(width, 10);
     // NEW: Draw fade dye toggle button (moved to bottom right)
     this.drawFadeDyeButton(width, height);
+    // Draw stats counter (always show)
+    this.drawStatsCounter(width, height);
     
     const currentCategory = this.pageOrder[this.currentPage];
     const pageInfo = "§7Page " + (this.currentPage + 1) + "/" + this.pageOrder.length + " - §e" + currentCategory;
@@ -725,31 +788,41 @@ drawLoadingScreen(width, height) {
         x = x + 100;
         this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, fadeNames[16], 16 === this.currentPage);
     } else {
-        // 1 row for normal colors (9 total)
-        const buttonY = screenHeight - 35;
+        // 2 rows for normal colors (1 + 9 total)
+        const row1Y = screenHeight - 60;
+        const row2Y = screenHeight - 35;
         const totalButtonWidth = (buttonWidth * 9) + (10 * 8);
         const startX = (screenWidth - totalButtonWidth) / 2;
         
-        const buttonNames = ["Pure", "Exo Pure", "Dyes", "Fairy", "Crystal", "Dragon", "Dungeon", "Rift", "Other"];
+        const buttonNames = ["Farming", "Fishing", "Kuudra", "Pure", "Exo Pure", "Dyes", "Fairy", "Crystal", "Dragon", "Dungeon", "Rift", "Other"];
         
+        // Row 1: Farming, Fishing, and Kuudra buttons (centered together)
+        const fourButtonWidth = (buttonWidth * 4) + 30;
+        const row1StartX = (screenWidth - fourButtonWidth) / 2;
+        this.drawSingleButton(row1StartX, row1Y, buttonWidth, buttonHeight, buttonNames[0], 0 === this.currentPage);
+        this.drawSingleButton(row1StartX + buttonWidth + 10, row1Y, buttonWidth, buttonHeight, buttonNames[1], 1 === this.currentPage);
+        this.drawSingleButton(row1StartX + (buttonWidth * 2) + 20, row1Y, buttonWidth, buttonHeight, buttonNames[2], 2 === this.currentPage);
+        this.drawSingleButton(row1StartX + (buttonWidth * 3) + 30, row1Y, buttonWidth, buttonHeight, "B-White", 3 === this.currentPage);
+        
+        // Row 2: Other 9 buttons
         let x = startX;
-        this.drawSingleButton(x, buttonY, buttonWidth, buttonHeight, buttonNames[0], 0 === this.currentPage);
+        this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, buttonNames[3], 4 === this.currentPage);
         x = x + 100;
-        this.drawSingleButton(x, buttonY, buttonWidth, buttonHeight, buttonNames[1], 1 === this.currentPage);
+        this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, buttonNames[4], 5 === this.currentPage);
         x = x + 100;
-        this.drawSingleButton(x, buttonY, buttonWidth, buttonHeight, buttonNames[2], 2 === this.currentPage);
+        this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, buttonNames[5], 6 === this.currentPage);
         x = x + 100;
-        this.drawSingleButton(x, buttonY, buttonWidth, buttonHeight, buttonNames[3], 3 === this.currentPage);
+        this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, buttonNames[6], 7 === this.currentPage);
         x = x + 100;
-        this.drawSingleButton(x, buttonY, buttonWidth, buttonHeight, buttonNames[4], 4 === this.currentPage);
+        this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, buttonNames[7], 8 === this.currentPage);
         x = x + 100;
-        this.drawSingleButton(x, buttonY, buttonWidth, buttonHeight, buttonNames[5], 5 === this.currentPage);
+        this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, buttonNames[8], 9 === this.currentPage);
         x = x + 100;
-        this.drawSingleButton(x, buttonY, buttonWidth, buttonHeight, buttonNames[6], 6 === this.currentPage);
+        this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, buttonNames[9], 10 === this.currentPage);
         x = x + 100;
-        this.drawSingleButton(x, buttonY, buttonWidth, buttonHeight, buttonNames[7], 7 === this.currentPage);
+        this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, buttonNames[10], 11 === this.currentPage);
         x = x + 100;
-        this.drawSingleButton(x, buttonY, buttonWidth, buttonHeight, buttonNames[8], 8 === this.currentPage);
+        this.drawSingleButton(x, row2Y, buttonWidth, buttonHeight, buttonNames[11], 12 === this.currentPage);
     }
 }
 
@@ -1008,29 +1081,47 @@ if (this.fadeDyeMode) {
         if (actualMouseX >= x && actualMouseX <= x + buttonWidth) { this.currentPage = 16; this.scrollOffset = 0; return; }
     }
 } else {
-    // 1 row for normal colors
-    const buttonY = height - 35;
+    // 2 rows for normal colors
+    const row1Y = height - 60;
+    const row2Y = height - 35;
     const totalButtonWidth = (buttonWidth * 9) + (10 * 8);
     const startX = (width - totalButtonWidth) / 2;
     
+    // Row 1: Farming, Fishing, Kuudra, and White-Black buttons (centered together)
+    const fourButtonWidth = (buttonWidth * 4) + 30; // 4 buttons + gaps
+    const row1StartX = (width - fourButtonWidth) / 2;
+    if (actualMouseX >= row1StartX && actualMouseX <= row1StartX + buttonWidth && actualMouseY >= row1Y && actualMouseY <= row1Y + buttonHeight) { 
+        this.currentPage = 0; this.scrollOffset = 0; return; 
+    }
+    if (actualMouseX >= row1StartX + buttonWidth + 10 && actualMouseX <= row1StartX + (buttonWidth * 2) + 10 && actualMouseY >= row1Y && actualMouseY <= row1Y + buttonHeight) { 
+        this.currentPage = 1; this.scrollOffset = 0; return; 
+    }
+    if (actualMouseX >= row1StartX + (buttonWidth * 2) + 20 && actualMouseX <= row1StartX + (buttonWidth * 3) + 20 && actualMouseY >= row1Y && actualMouseY <= row1Y + buttonHeight) { 
+    this.currentPage = 2; this.scrollOffset = 0; return; 
+    }
+    if (actualMouseX >= row1StartX + (buttonWidth * 3) + 30 && actualMouseX <= row1StartX + fourButtonWidth && actualMouseY >= row1Y && actualMouseY <= row1Y + buttonHeight) { 
+    this.currentPage = 3; this.scrollOffset = 0; return; 
+    }
+    
+    // Row 2: Other 9 buttons
     let x = startX;
-    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= buttonY && actualMouseY <= buttonY + buttonHeight) { this.currentPage = 0; this.scrollOffset = 0; return; }
+    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= row2Y && actualMouseY <= row2Y + buttonHeight) { this.currentPage = 4; this.scrollOffset = 0; return; }
     x = x + 100;
-    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= buttonY && actualMouseY <= buttonY + buttonHeight) { this.currentPage = 1; this.scrollOffset = 0; return; }
+    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= row2Y && actualMouseY <= row2Y + buttonHeight) { this.currentPage = 5; this.scrollOffset = 0; return; }
     x = x + 100;
-    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= buttonY && actualMouseY <= buttonY + buttonHeight) { this.currentPage = 2; this.scrollOffset = 0; return; }
+    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= row2Y && actualMouseY <= row2Y + buttonHeight) { this.currentPage = 6; this.scrollOffset = 0; return; }
     x = x + 100;
-    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= buttonY && actualMouseY <= buttonY + buttonHeight) { this.currentPage = 3; this.scrollOffset = 0; return; }
+    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= row2Y && actualMouseY <= row2Y + buttonHeight) { this.currentPage = 7; this.scrollOffset = 0; return; }
     x = x + 100;
-    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= buttonY && actualMouseY <= buttonY + buttonHeight) { this.currentPage = 4; this.scrollOffset = 0; return; }
+    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= row2Y && actualMouseY <= row2Y + buttonHeight) { this.currentPage = 8; this.scrollOffset = 0; return; }
     x = x + 100;
-    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= buttonY && actualMouseY <= buttonY + buttonHeight) { this.currentPage = 5; this.scrollOffset = 0; return; }
+    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= row2Y && actualMouseY <= row2Y + buttonHeight) { this.currentPage = 9; this.scrollOffset = 0; return; }
     x = x + 100;
-    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= buttonY && actualMouseY <= buttonY + buttonHeight) { this.currentPage = 6; this.scrollOffset = 0; return; }
+    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= row2Y && actualMouseY <= row2Y + buttonHeight) { this.currentPage = 10; this.scrollOffset = 0; return; }
     x = x + 100;
-    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= buttonY && actualMouseY <= buttonY + buttonHeight) { this.currentPage = 7; this.scrollOffset = 0; return; }
+    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= row2Y && actualMouseY <= row2Y + buttonHeight) { this.currentPage = 11; this.scrollOffset = 0; return; }
     x = x + 100;
-    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= buttonY && actualMouseY <= buttonY + buttonHeight) { this.currentPage = 8; this.scrollOffset = 0; return; }
+    if (actualMouseX >= x && actualMouseX <= x + buttonWidth && actualMouseY >= row2Y && actualMouseY <= row2Y + buttonHeight) { this.currentPage = 12; this.scrollOffset = 0; return; }
 }
 }
 
@@ -1173,21 +1264,24 @@ startFadeDyeCalculation(categoryName) {
     // Initialize cache immediately so rows can be drawn
     this.fadeDyeOptimalCache[categoryName] = {
         category: categoryName,
-        matches: {},
-        stagesProcessed: 0
+        matchesByIndex: {}  // Only use index-based storage
     };
     
-    // Initialize empty matches for all stages
+    // Initialize empty matches for all stages BY INDEX ONLY
     let s = 0;
     while (s < stages.length) {
         const stage = stages[s];
-        this.fadeDyeOptimalCache[categoryName].matches[stage.hex] = {
+        
+        // Initialize by stage index
+        this.fadeDyeOptimalCache[categoryName].matchesByIndex[s] = {
             helmet: null,
             chestplate: null,
             leggings: null,
             boots: null,
-            calculated: false
+            calculated: false,
+            stageHex: stage.hex
         };
+        
         s = s + 1;
     }
     
@@ -1212,7 +1306,7 @@ calculateNextFadeDyeStage(categoryName, stageIndex) {
     }
     
     if (stageIndex >= stages.length) {
-        // Phase 2: Assign optimal matches (each piece used only once)
+        // Phase 2: Assign optimal matches (each piece used only once per category)
         this.assignOptimalFadeDyeMatches(categoryName);
         
         // All done!
@@ -1221,12 +1315,12 @@ calculateNextFadeDyeStage(categoryName, stageIndex) {
         this.calculationTotal = 0;
         
         // Save to disk
-this.cacheStorage.matchCache = this.matchCache;
-this.cacheStorage.fadeDyeOptimalCache = this.fadeDyeOptimalCache;
-this.cacheStorage.normalColorCache = this.normalColorCache;
-this.cacheStorage.collectionSize = this.collectionSize;
-this.cacheStorage.lastUpdated = Date.now();
-this.cacheStorage.save();
+        this.cacheStorage.matchCache = this.matchCache;
+        this.cacheStorage.fadeDyeOptimalCache = this.fadeDyeOptimalCache;
+        this.cacheStorage.normalColorCache = this.normalColorCache;
+        this.cacheStorage.collectionSize = this.collectionSize;
+        this.cacheStorage.lastUpdated = Date.now();
+        this.cacheStorage.save();
         
         return;
     }
@@ -1258,12 +1352,15 @@ this.cacheStorage.save();
                     );
                     
                     if (deltaE <= 5) {
+                        // Store with STAGE INDEX instead of just hex
                         this.fadeDyeOptimalCache[categoryName].allCandidates[pieceType].push({
+                            stageIndex: stageIndex,  // NEW: track stage index
                             stageHex: stage.hex,
                             uuid: uuid,
                             piece: piece,
                             deltaE: deltaE
                         });
+                        
                     }
                 }
             }
@@ -1288,49 +1385,64 @@ assignOptimalFadeDyeMatches(categoryName) {
     const cache = this.fadeDyeOptimalCache[categoryName];
     const pieceTypes = ["helmet", "chestplate", "leggings", "boots"];
     
-    // For each piece type, assign optimally (each piece used only once)
+    // Get the actual stages in order from the category
+    const stages = this.categories[categoryName];
+    if (!stages || stages.length === 0) {
+        return;
+    }
+    
+    // For each piece type, assign optimally
     let p = 0;
     while (p < 4) {
         const pieceType = pieceTypes[p];
         const candidates = cache.allCandidates[pieceType];
         
-        // Sort by deltaE (best matches first)
+        // Sort ALL candidates by deltaE (best matches first)
         candidates.sort(function(a, b) {
             return a.deltaE - b.deltaE;
         });
         
-        const usedPieces = {};
-        const assignedStages = {};
+        // Track which pieces have been used FOR THIS PIECE TYPE
+        const usedPiecesThisType = {};
+        // Track which STAGE INDICES have been assigned
+        const assignedStageIndices = {};
+        let assignmentCount = 0;
         
-        // Assign greedily: best match first
-        let c = 0;
-        while (c < candidates.length) {
-            const candidate = candidates[c];
+        // Go through candidates in deltaE order (greedy assignment)
+        let candIdx = 0;
+        while (candIdx < candidates.length) {
+            const candidate = candidates[candIdx];
+            const stageIdx = candidate.stageIndex;
             
-            // Only assign if piece hasn't been used AND stage hasn't been assigned
-            if (!usedPieces[candidate.uuid] && !assignedStages[candidate.stageHex]) {
-                cache.matches[candidate.stageHex][pieceType] = {
+            // Only assign if:
+            // 1. This piece hasn't been used yet for this piece type
+            // 2. This STAGE INDEX hasn't been assigned yet
+            if (!usedPiecesThisType[candidate.uuid] && !assignedStageIndices[stageIdx]) {
+                // Assign this piece to this stage BY INDEX
+                cache.matchesByIndex[stageIdx][pieceType] = {
                     name: candidate.piece.pieceName,
                     hex: candidate.piece.hexcode,
                     deltaE: candidate.deltaE,
                     uuid: candidate.uuid
                 };
                 
-                usedPieces[candidate.uuid] = true;
-                assignedStages[candidate.stageHex] = true;
+                // Mark piece as used FOR THIS PIECE TYPE
+                usedPiecesThisType[candidate.uuid] = true;
+                // Mark this STAGE INDEX as assigned
+                assignedStageIndices[stageIdx] = true;
+                assignmentCount = assignmentCount + 1;
             }
             
-            c = c + 1;
+            candIdx = candIdx + 1;
         }
         
         p = p + 1;
     }
     
-    // Mark all stages as calculated
-    const stageHexes = Object.keys(cache.matches);
+    // Mark all stages as calculated BY INDEX
     let s = 0;
-    while (s < stageHexes.length) {
-        cache.matches[stageHexes[s]].calculated = true;
+    while (s < stages.length) {
+        cache.matchesByIndex[s].calculated = true;
         s = s + 1;
     }
     
@@ -1567,16 +1679,25 @@ drawChecklistRowCached(stage, y) {
         // Draw the row header
         this.drawColorBoxAndName(stage, y);
         
-        // Check if cache exists and this stage is calculated
+        // NEW: Get the stage index for this row
+        const stages = this.categories[currentCategory];
+        let stageIndex = -1;
+        let si = 0;
+        while (si < stages.length && stageIndex === -1) {
+            if (stages[si] === stage) {
+                stageIndex = si;
+            }
+            si = si + 1;
+        }
+        
+        // Check if cache exists and this stage is calculated BY INDEX
         const cacheExists = this.fadeDyeOptimalCache[currentCategory] && 
-                           this.fadeDyeOptimalCache[currentCategory].matches[cacheKey];
-        const hasData = cacheExists && (
-            this.fadeDyeOptimalCache[currentCategory].matches[cacheKey].helmet !== undefined ||
-            this.fadeDyeOptimalCache[currentCategory].matches[cacheKey].calculated === true
-        );
+                           this.fadeDyeOptimalCache[currentCategory].matchesByIndex &&
+                           this.fadeDyeOptimalCache[currentCategory].matchesByIndex[stageIndex];
+        const hasData = cacheExists && this.fadeDyeOptimalCache[currentCategory].matchesByIndex[stageIndex].calculated;
         
         if (hasData) {
-            const optimal = this.fadeDyeOptimalCache[currentCategory].matches[cacheKey];
+            const optimal = this.fadeDyeOptimalCache[currentCategory].matchesByIndex[stageIndex];
             this.drawMatchBox(optimal.helmet, 250, y, stage.hex);
             this.drawMatchBox(optimal.chestplate, 370, y, stage.hex);
             this.drawMatchBox(optimal.leggings, 500, y, stage.hex);
@@ -1593,47 +1714,47 @@ drawChecklistRowCached(stage, y) {
     }
     
     // Normal mode: use progressive calculation like fade dyes
-const currentCategory = this.pageOrder[this.currentPage];
-const cacheExists = this.normalColorCache[currentCategory] && 
-                   this.normalColorCache[currentCategory].matches[cacheKey];
-const hasData = cacheExists && this.normalColorCache[currentCategory].matches[cacheKey].calculated;
+    const currentCategory = this.pageOrder[this.currentPage];
+    const cacheExists = this.normalColorCache[currentCategory] && 
+                       this.normalColorCache[currentCategory].matches[cacheKey];
+    const hasData = cacheExists && this.normalColorCache[currentCategory].matches[cacheKey].calculated;
 
-if (!hasData) {
-    // Still calculating - show loading boxes
-    this.drawColorBoxAndName(stage, y);
-    
-    if (!this.pieceToPieceMode || this.stageHasPiece(stage, "helmet")) {
-        this.drawLoadingBox(250, y);
-    } else {
-        Renderer.drawRect(Renderer.color(60, 60, 60, 180), 250, y, 100, 20);
-        Renderer.drawStringWithShadow("§8-", 295, y + 6);
+    if (!hasData) {
+        // Still calculating - show loading boxes
+        this.drawColorBoxAndName(stage, y);
+        
+        if (!this.pieceToPieceMode || this.stageHasPiece(stage, "helmet")) {
+            this.drawLoadingBox(250, y);
+        } else {
+            Renderer.drawRect(Renderer.color(60, 60, 60, 180), 250, y, 100, 20);
+            Renderer.drawStringWithShadow("§8-", 295, y + 6);
+        }
+        
+        if (!this.pieceToPieceMode || this.stageHasPiece(stage, "chestplate")) {
+            this.drawLoadingBox(370, y);
+        } else {
+            Renderer.drawRect(Renderer.color(60, 60, 60, 180), 370, y, 100, 20);
+            Renderer.drawStringWithShadow("§8-", 415, y + 6);
+        }
+        
+        if (!this.pieceToPieceMode || this.stageHasPiece(stage, "leggings")) {
+            this.drawLoadingBox(500, y);
+        } else {
+            Renderer.drawRect(Renderer.color(60, 60, 60, 180), 500, y, 100, 20);
+            Renderer.drawStringWithShadow("§8-", 545, y + 6);
+        }
+        
+        if (!this.pieceToPieceMode || this.stageHasPiece(stage, "boots")) {
+            this.drawLoadingBox(630, y);
+        } else {
+            Renderer.drawRect(Renderer.color(60, 60, 60, 180), 630, y, 100, 20);
+            Renderer.drawStringWithShadow("§8-", 675, y + 6);
+        }
+        
+        return;
     }
-    
-    if (!this.pieceToPieceMode || this.stageHasPiece(stage, "chestplate")) {
-        this.drawLoadingBox(370, y);
-    } else {
-        Renderer.drawRect(Renderer.color(60, 60, 60, 180), 370, y, 100, 20);
-        Renderer.drawStringWithShadow("§8-", 415, y + 6);
-    }
-    
-    if (!this.pieceToPieceMode || this.stageHasPiece(stage, "leggings")) {
-        this.drawLoadingBox(500, y);
-    } else {
-        Renderer.drawRect(Renderer.color(60, 60, 60, 180), 500, y, 100, 20);
-        Renderer.drawStringWithShadow("§8-", 545, y + 6);
-    }
-    
-    if (!this.pieceToPieceMode || this.stageHasPiece(stage, "boots")) {
-        this.drawLoadingBox(630, y);
-    } else {
-        Renderer.drawRect(Renderer.color(60, 60, 60, 180), 630, y, 100, 20);
-        Renderer.drawStringWithShadow("§8-", 675, y + 6);
-    }
-    
-    return;
-}
 
-const cached = this.normalColorCache[currentCategory].matches[cacheKey];
+    const cached = this.normalColorCache[currentCategory].matches[cacheKey];
     
     this.drawColorBoxAndName(stage, y);
     
@@ -1676,7 +1797,9 @@ drawMatchBox(match, x, y, targetHex) {
     
     // Only green or yellow - FULLY OPAQUE (255 alpha)
     let qualityColor;
-    if (match.deltaE <= 2) {
+    if (match.deltaE === 0) {
+        qualityColor = Renderer.color(128, 0, 128, 255);  // Solid Purple
+    } else if (match.deltaE <= 2) {
         qualityColor = Renderer.color(0, 200, 0, 255);  // Solid green
     } else {
         qualityColor = Renderer.color(200, 200, 0, 255);  // Solid yellow
@@ -2144,5 +2267,264 @@ drawColorBoxAndName(stage, y) {
         displayName = displayName.substring(0, 25) + "...";
     }
     Renderer.drawStringWithShadow("§f" + displayName, 80, y + 6);
+}
+
+calculateCurrentPageStats() {
+    const currentCategory = this.pageOrder[this.currentPage];
+    const stages = this.categories[currentCategory];
+    
+    // Check if cache is ready
+    if (this.fadeDyeMode) {
+        if (!this.fadeDyeOptimalCache[currentCategory] || 
+            !this.fadeDyeOptimalCache[currentCategory].matchesByIndex) {
+            return { t1: 0, t2: 0, missing: 0, filled: 0, total: 0, percent: 0, calculating: true };
+        }
+    } else {
+        if (!this.normalColorCache[currentCategory] || 
+            !this.normalColorCache[currentCategory].matches) {
+            return { t1: 0, t2: 0, missing: 0, filled: 0, total: 0, percent: 0, calculating: true };
+        }
+    }
+    
+    let t1Total = 0;
+    let t2Total = 0;
+    let missingTotal = 0;
+    let totalSlots = 0;
+    
+    // Helper function to count one stage
+    const countStage = function(stageIndex) {
+        if (stageIndex >= stages.length) return;
+        
+        const currentStage = stages[stageIndex];
+        
+        let calculated = false;
+        let cache = null;
+        
+        if (this.fadeDyeMode) {
+            calculated = this.fadeDyeOptimalCache[currentCategory] &&
+                        this.fadeDyeOptimalCache[currentCategory].matchesByIndex &&
+                        this.fadeDyeOptimalCache[currentCategory].matchesByIndex[stageIndex] &&
+                        this.fadeDyeOptimalCache[currentCategory].matchesByIndex[stageIndex].calculated;
+            
+            if (calculated) {
+                cache = this.fadeDyeOptimalCache[currentCategory].matchesByIndex[stageIndex];
+            }
+        } else {
+            const hex = "" + stages[stageIndex].hex;
+            calculated = this.normalColorCache[currentCategory] &&
+                        this.normalColorCache[currentCategory].matches[hex] &&
+                        this.normalColorCache[currentCategory].matches[hex].calculated;
+            
+            if (calculated) {
+                cache = this.normalColorCache[currentCategory].matches[hex];
+            }
+        }
+        
+        if (!calculated || !cache) return;
+        
+        // Helmet - only count if piece filter allows it
+        if (!this.pieceToPieceMode || this.stageHasPiece(currentStage, "helmet")) {
+            const helmetDelta = cache.helmet ? (cache.helmet.deltaE + 0) : -1;
+            totalSlots = totalSlots + 1;
+            if (helmetDelta === -1) { missingTotal = missingTotal + 1; }
+            else if (helmetDelta <= 2) { t1Total = t1Total + 1; }
+            else if (helmetDelta <= 5) { t2Total = t2Total + 1; }
+        }
+        
+        // Chestplate - only count if piece filter allows it
+        if (!this.pieceToPieceMode || this.stageHasPiece(currentStage, "chestplate")) {
+            const chestDelta = cache.chestplate ? (cache.chestplate.deltaE + 0) : -1;
+            totalSlots = totalSlots + 1;
+            if (chestDelta === -1) { missingTotal = missingTotal + 1; }
+            else if (chestDelta <= 2) { t1Total = t1Total + 1; }
+            else if (chestDelta <= 5) { t2Total = t2Total + 1; }
+        }
+        
+        // Leggings - only count if piece filter allows it
+        if (!this.pieceToPieceMode || this.stageHasPiece(currentStage, "leggings")) {
+            const legsDelta = cache.leggings ? (cache.leggings.deltaE + 0) : -1;
+            totalSlots = totalSlots + 1;
+            if (legsDelta === -1) { missingTotal = missingTotal + 1; }
+            else if (legsDelta <= 2) { t1Total = t1Total + 1; }
+            else if (legsDelta <= 5) { t2Total = t2Total + 1; }
+        }
+        
+        // Boots - only count if piece filter allows it
+        if (!this.pieceToPieceMode || this.stageHasPiece(currentStage, "boots")) {
+            const bootsDelta = cache.boots ? (cache.boots.deltaE + 0) : -1;
+            totalSlots = totalSlots + 1;
+            if (bootsDelta === -1) { missingTotal = missingTotal + 1; }
+            else if (bootsDelta <= 2) { t1Total = t1Total + 1; }
+            else if (bootsDelta <= 5) { t2Total = t2Total + 1; }
+        }
+    }.bind(this);
+    
+    // Manually call for each stage index
+    countStage(0);
+    countStage(1);
+    countStage(2);
+    countStage(3);
+    countStage(4);
+    countStage(5);
+    countStage(6);
+    countStage(7);
+    countStage(8);
+    countStage(9);
+    countStage(10);
+    countStage(11);
+    countStage(12);
+    countStage(13);
+    countStage(14);
+    countStage(15);
+    countStage(16);
+    countStage(17);
+    countStage(18);
+    countStage(19);
+    countStage(20);
+    countStage(21);
+    countStage(22);
+    countStage(23);
+    countStage(24);
+    countStage(25);
+    countStage(26);
+    countStage(27);
+    countStage(28);
+    countStage(29);
+    countStage(30);
+    countStage(31);
+    countStage(32);
+    countStage(33);
+    countStage(34);
+    countStage(35);
+    countStage(36);
+    countStage(37);
+    countStage(38);
+    countStage(39);
+    countStage(40);
+    countStage(41);
+    countStage(42);
+    countStage(43);
+    countStage(44);
+    countStage(45);
+    countStage(46);
+    countStage(47);
+    countStage(48);
+    countStage(49);
+    countStage(50);
+    countStage(51);
+    countStage(52);
+    countStage(53);
+    countStage(54);
+    countStage(55);
+    countStage(56);
+    countStage(57);
+    countStage(58);
+    countStage(59);
+    countStage(60);
+    countStage(61);
+    countStage(62);
+    countStage(63);
+    countStage(64);
+    countStage(65);
+    countStage(66);
+    countStage(67);
+    countStage(68);
+    countStage(69);
+    countStage(70);
+    countStage(71);
+    countStage(72);
+    countStage(73);
+    countStage(74);
+    countStage(75);
+    countStage(76);
+    countStage(77);
+    countStage(78);
+    countStage(79);
+    countStage(80);
+    countStage(81);
+    countStage(82);
+    countStage(83);
+    countStage(84);
+    countStage(85);
+    countStage(86);
+    countStage(87);
+    countStage(88);
+    countStage(89);
+    countStage(90);
+    countStage(91);
+    countStage(92);
+    countStage(93);
+    countStage(94);
+    countStage(95);
+    countStage(96);
+    countStage(97);
+    countStage(98);
+    countStage(99);
+    
+    const filledTotal = t1Total + t2Total;
+    const percentFilled = totalSlots > 0 ? ((filledTotal / totalSlots) * 100).toFixed(1) : "0.0";
+    
+    const statsResult = {};
+    statsResult.t1 = t1Total;
+    statsResult.t2 = t2Total;
+    statsResult.missing = missingTotal;
+    statsResult.filled = filledTotal;
+    statsResult.total = totalSlots;
+    statsResult.percent = percentFilled;
+    statsResult.calculating = false;
+    
+    return statsResult;
+}
+
+drawStatsCounter(screenWidth, screenHeight) {
+    const stats = this.calculateCurrentPageStats();
+    
+    const boxWidth = 180;
+    const boxHeight = 40;
+    const boxX = screenWidth - boxWidth - 20;
+    const boxY = 35;
+    
+    // Background
+    Renderer.drawRect(Renderer.color(40, 40, 40, 200), boxX, boxY, boxWidth, boxHeight);
+    
+    // Border
+    const borderColor = Renderer.color(100, 100, 100, 200);
+    Renderer.drawRect(borderColor, boxX, boxY, boxWidth, 2);
+    Renderer.drawRect(borderColor, boxX, boxY + boxHeight - 2, boxWidth, 2);
+    Renderer.drawRect(borderColor, boxX, boxY, 2, boxHeight);
+    Renderer.drawRect(borderColor, boxX + boxWidth - 2, boxY, 2, boxHeight);
+    
+    if (stats.calculating) {
+        const calcText = "§eCalculating...";
+        const calcWidth = Renderer.getStringWidth(calcText);
+        const calcX = boxX + (boxWidth - calcWidth) / 2;
+        Renderer.drawStringWithShadow(calcText, calcX, boxY + 15);
+        return;
+    }
+    
+    // Calculate percentages with one decimal place
+    const t1Percent = stats.total > 0 ? ((stats.t1 / stats.total) * 100).toFixed(1) : "0.0";
+    const t2Percent = stats.total > 0 ? ((stats.t2 / stats.total) * 100).toFixed(1) : "0.0";
+    
+    // Determine T1 color based on percentage (convert to number for comparison)
+    const t1PercentNum = parseFloat(t1Percent);
+    let t1PercentColor = "§c"; // Red by default
+    if (t1PercentNum >= 50) {
+        t1PercentColor = "§a"; // Green
+    } else if (t1PercentNum >= 35) {
+        t1PercentColor = "§e"; // Yellow
+    }
+    
+    // First line: T1 and T2 counts with percentages
+    const line1 = "§7T1: §c" + stats.t1 + " §7(" + t1PercentColor + t1Percent + "%§7) | T2: §6" + stats.t2 + " §7(§f" + t2Percent + "%§7)";
+    const line1Width = Renderer.getStringWidth(line1);
+    const line1X = boxX + (boxWidth - line1Width) / 2;
+    Renderer.drawStringWithShadow(line1, line1X, boxY + 6);
+    
+    // Second line: Missing and total filled percentage (white %)
+    const line2 = "§7Missing: §c" + stats.missing + " §7| §e" + stats.filled + "/" + stats.total + " §7(§f" + stats.percent + "%§7)";
+    const line2Width = Renderer.getStringWidth(line2);
+    const line2X = boxX + (boxWidth - line2Width) / 2;
+    Renderer.drawStringWithShadow(line2, line2X, boxY + 22);
 }
 }
