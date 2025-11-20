@@ -1,0 +1,10 @@
+{
+  "name": "SeymourAnalyzer",
+  "creator": "AllyMe",
+  "description": "Analyzes Seymour's Special Armor colors and matches them to known dyes",
+  "version": "1.0.1",
+  "entry": "index.js",
+  "requires": ["PogData"]
+}
+
+
