@@ -149,10 +149,29 @@ loadIndex = loadIndex + 1;
         
         // Use ChatTriggers Gui instead of JavaAdapter
         const self = this;
+        
+        // Store the original GUI scale
+        const mc = Client.getMinecraft();
+        self.originalGuiScale = mc.field_71474_y.field_74335_Z;
+        
         this.gui = new Gui();
         
+        this.gui.registerOpened(() => {
+            // Force GUI scale to 2 when opening
+            const mc = Client.getMinecraft();
+            mc.field_71474_y.field_74335_Z = 2;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        });
+        
+        this.gui.registerClosed(() => {
+            // Restore original GUI scale when closing
+            const mc = Client.getMinecraft();
+            mc.field_71474_y.field_74335_Z = self.originalGuiScale;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        });
+        
         this.gui.registerDraw(() => {
-    if (self.isOpen) {
+        if (self.isOpen) {
         // Check if shift is held and get mouse position
         const Keyboard = Java.type("org.lwjgl.input.Keyboard");
         const shiftHeld = Keyboard.isKeyDown(42) || Keyboard.isKeyDown(54);
@@ -161,8 +180,7 @@ loadIndex = loadIndex + 1;
             // Get mouse position
             const Mouse = Java.type("org.lwjgl.input.Mouse");
             const mc = Client.getMinecraft();
-            const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
-            const scale = scaledRes.func_78325_e();
+            const scale = 2;
             const mouseX = Mouse.getX() / scale;
             const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
             
@@ -319,7 +337,8 @@ loadIndex = loadIndex + 1;
 });
         
         this.gui.registerScrolled((x, y, direction) => {
-            const height = Renderer.screen.getHeight();
+            const mc = Client.getMinecraft();
+            const height = (mc.field_71440_d) / 2;
             const maxVisibleRows = Math.floor((height - 90) / 20);
             const displayPieces = self.filterPiecesBySearch();
             const maxScroll = Math.max(0, displayPieces.length - maxVisibleRows);
@@ -335,14 +354,14 @@ loadIndex = loadIndex + 1;
     // Get actual mouse coordinates
     const Mouse = Java.type("org.lwjgl.input.Mouse");
     const mc = Client.getMinecraft();
-    const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
-    const scale = scaledRes.func_78325_e();
+    const scale = 2;
     const actualMouseX = Mouse.getX() / scale;
     const actualMouseY = (mc.field_71440_d - Mouse.getY()) / scale;
 
-    // Get screen dimensions
-    const width = Renderer.screen.getWidth();
-    const height = Renderer.screen.getHeight();
+    // Get screen dimensions (use fixed scale)
+    const widthCalcMc = Client.getMinecraft();
+    const width = widthCalcMc.field_71443_c / 2;
+    const height = widthCalcMc.field_71440_d / 2;
     
     // Check for RIGHT CLICK
     if (button === 1) {
@@ -466,6 +485,12 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
     }
 
     close() {
+    const mc = Client.getMinecraft();
+    if (this.originalGuiScale !== undefined) {
+        mc.field_71474_y.field_74335_Z = this.originalGuiScale;
+        mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+    }
+    
     this.isOpen = false;
     this.allPieces = [];
     this.contextMenu = null;
@@ -774,8 +799,7 @@ drawChecklistButton(screenWidth, yPos) {
     
     const Mouse = Java.type("org.lwjgl.input.Mouse");
     const mc = Client.getMinecraft();
-    const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
-    const scale = scaledRes.func_78325_e();
+    const scale = 2;
     const mouseX = Mouse.getX() / scale;
     const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
     
@@ -801,7 +825,8 @@ drawChecklistButton(screenWidth, yPos) {
 }
 
     drawSearchBox() {
-    const width = Renderer.screen.getWidth();
+    const mc = Client.getMinecraft();
+    const width = mc.field_71443_c / 2;
     const boxWidth = 235; // Changed from 250 to 235 - a bit narrower
     const boxHeight = 25;
     const boxX = width - boxWidth - 20;
@@ -835,7 +860,8 @@ drawChecklistButton(screenWidth, yPos) {
 }
 
    drawHexSearchBox() {
-    const width = Renderer.screen.getWidth();
+    const mc = Client.getMinecraft();
+    const width = mc.field_71443_c / 2;
     const boxWidth = 125; // Changed from 135 to 125 - a bit narrower
     const boxHeight = 25;
     const boxX = width - boxWidth - 20;
@@ -868,7 +894,8 @@ drawChecklistButton(screenWidth, yPos) {
 }
 
     handleSearchBoxClick(mouseX, mouseY) {
-    const width = Renderer.screen.getWidth();
+    const mc = Client.getMinecraft();
+    const width = mc.field_71443_c / 2;
     const boxWidth = 235; // Changed from 250 to 235
     const boxHeight = 25;
     const boxX = width - boxWidth - 20;
@@ -887,7 +914,8 @@ drawChecklistButton(screenWidth, yPos) {
     }
 }
     handleHexSearchBoxClick(mouseX, mouseY) {
-    const width = Renderer.screen.getWidth();
+    const mc = Client.getMinecraft();
+    const width = mc.field_71443_c / 2;
     const boxWidth = 125; // Changed from 135 to 125
     const boxHeight = 25;
     const boxX = width - boxWidth - 20;
@@ -908,11 +936,12 @@ drawChecklistButton(screenWidth, yPos) {
 }
     drawScreen(mouseX, mouseY, partialTicks) {
     
-    const width = Renderer.screen.getWidth();
-    const height = Renderer.screen.getHeight();
+    const mc = Client.getMinecraft();
+    const width = mc.field_71443_c / 2;
+    const height = mc.field_71440_d / 2;
 
-// Darker grey background for entire GUI
-Renderer.drawRect(Renderer.color(20, 20, 20, 180), 0, 0, width, height);
+    // Darker grey background for entire GUI
+    Renderer.drawRect(Renderer.color(20, 20, 20, 180), 0, 0, width, height);
     
     // Title
     const title = "§l§nSeymour Database";
@@ -1357,8 +1386,7 @@ if (this.isColorDark(piece.hex)) {
             // Highlight on hover
             const Mouse = Java.type("org.lwjgl.input.Mouse");
             const mc = Client.getMinecraft();
-            const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
-            const scale = scaledRes.func_78325_e();
+            const scale = 2;
             const mouseX = Mouse.getX() / scale;
             const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
             
@@ -1376,8 +1404,7 @@ if (this.isColorDark(piece.hex)) {
             
             const Mouse = Java.type("org.lwjgl.input.Mouse");
             const mc = Client.getMinecraft();
-            const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
-            const scale = scaledRes.func_78325_e();
+            const scale = 2;
             const mouseX = Mouse.getX() / scale;
             const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
             
@@ -1709,8 +1736,7 @@ drawWordButton(screenWidth, screenHeight) {
     
     const Mouse = Java.type("org.lwjgl.input.Mouse");
     const mc = Client.getMinecraft();
-    const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
-    const scale = scaledRes.func_78325_e();
+    const scale = 2;
     const mouseX = Mouse.getX() / scale;
     const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
     
@@ -1743,8 +1769,7 @@ drawPatternButton(screenWidth, screenHeight) {
     
     const Mouse = Java.type("org.lwjgl.input.Mouse");
     const mc = Client.getMinecraft();
-    const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
-    const scale = scaledRes.func_78325_e();
+    const scale = 2;
     const mouseX = Mouse.getX() / scale;
     const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
     
@@ -1789,8 +1814,7 @@ drawDupesButton(screenWidth, screenHeight) {
     
     const Mouse = Java.type("org.lwjgl.input.Mouse");
     const mc = Client.getMinecraft();
-    const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
-    const scale = scaledRes.func_78325_e();
+    const scale = 2;
     const mouseX = Mouse.getX() / scale;
     const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
     
