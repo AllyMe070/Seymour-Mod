@@ -54,6 +54,56 @@ const data = new PogObject("SeymourAnalyzer", {
 });
 
 const collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
+// Ensure PogObject files exist but don't overwrite non-empty files
+(function() {
+  const File = Java.type("java.io.File");
+  const FileReader = Java.type("java.io.FileReader");
+  const BufferedReader = Java.type("java.io.BufferedReader");
+
+  function ensurePogObject(filename) {
+    const filePath = "config/ChatTriggers/modules/SeymourAnalyzer/" + filename;
+    const f = new File(filePath);
+
+    // If file doesn't exist, create parent dirs and save an empty PogObject
+    if (!f.exists()) {
+      const parent = f.getParentFile();
+      if (parent && !parent.exists()) parent.mkdirs();
+      const obj = new PogObject("SeymourAnalyzer", {}, filename);
+      try { obj.save(); } catch (e) {}
+      return obj;
+    }
+
+    // Read existing file contents
+    let content = "";
+    try {
+      const reader = new BufferedReader(new FileReader(f));
+      let line;
+      while ((line = reader.readLine()) !== null) content += line;
+      reader.close();
+    } catch (e) {
+      content = "";
+    }
+
+    const trimmed = (content || "").trim();
+
+    // If file is empty or exactly "{}", treat as empty and ensure PogObject writes default {}
+    if (trimmed === "" || trimmed === "{}") {
+      const obj = new PogObject("SeymourAnalyzer", {}, filename);
+      try { obj.save(); } catch (e) {}
+      return obj;
+    }
+
+    // Otherwise leave existing content intact; just load it via PogObject (do NOT call save)
+    return new PogObject("SeymourAnalyzer", {}, filename);
+  }
+
+  const wordList = ensurePogObject("Words.json");
+  const customColors = ensurePogObject("CustomColors.json");
+
+  // Expose to module scope
+  this.wordList = wordList;
+  this.customColors = customColors;
+})();
 
 // Force reload collection from disk WITHOUT FileLib
 try {
@@ -122,8 +172,6 @@ try {
 } catch (e) {
   ChatLib.chat("§c[Seymour] Failed to reload collection: " + e);
 }
-const customColors = new PogObject("SeymourAnalyzer", {}, "CustomColors.json");
-const wordList = new PogObject("SeymourAnalyzer", {}, "Words.json");
 
 // UUID cache for fast lookups - MOVED HERE so we can populate it early
 const uuidCache = {};
@@ -3100,7 +3148,7 @@ if (arg1 && arg1.toLowerCase() === "clear") {
 
       clearAllCaches();
 
-      ChatLib.chat("§a[Seymour Analyzer] §7High fades " + (data.showHighFades ? "§aenabled" : "§cdisabled") + "§7!");
+      ChatLib.chat("§a[Seymour Analyzer] §7High fades will now " + (data.showHighFades ? "§anot show up" : "§cshow up") + "§7!");
       return;
     } else {
       ChatLib.chat("§a[Seymour Analyzer] §cInvalid toggle option! §7(Available: infobox, highlights, fade, 3p, sets, words, pattern, custom, dupes, highfades)");
