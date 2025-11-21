@@ -14,6 +14,7 @@ export class PatternMatchesGUI {
         this.sortColumn = null;
         this.sortDirection = "asc";
         this.cachedPatternCounts = null;
+        this.isSwitchingGui = false;
     }
 
     open() {
@@ -223,8 +224,28 @@ export class PatternMatchesGUI {
         ChatLib.chat("§c[Pattern Matches] Error loading: " + e);
     }
     
+    // Store the original GUI scale
+    const mc = Client.getMinecraft();
+    this.originalGuiScale = mc.field_71474_y.field_74335_Z;
+    
     const self = this;
     this.gui = new Gui();
+    
+    this.gui.registerOpened(() => {
+        // Force GUI scale to 2 when opening
+        const mc = Client.getMinecraft();
+        mc.field_71474_y.field_74335_Z = 2;
+        mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+    });
+    
+    this.gui.registerClosed(() => {
+        // Restore original GUI scale when closing
+        const mc = Client.getMinecraft();
+        if (self.originalGuiScale !== undefined) {
+            mc.field_71474_y.field_74335_Z = self.originalGuiScale;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        }
+    });
     
     this.gui.registerDraw(() => {
         if (self.isOpen) {
@@ -287,6 +308,7 @@ export class PatternMatchesGUI {
             
             if (actualMouseX >= backButtonX && actualMouseX <= backButtonX + backButtonWidth &&
                 actualMouseY >= backButtonY && actualMouseY <= backButtonY + 20) {
+                self.isSwitchingGui = true;
                 self.close();
                 ChatLib.command("seymour db", true);
                 return;
@@ -330,6 +352,13 @@ export class PatternMatchesGUI {
         this.patternMatches = [];
         this.scrollOffset = 0;
         Client.currentGui.close();
+        
+        // Restore GUI scale AFTER closing (so it happens after registerClosed)
+        const mc = Client.getMinecraft();
+        if (this.originalGuiScale !== undefined && !this.isSwitchingGui) {
+            mc.field_71474_y.field_74335_Z = this.originalGuiScale;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        }
     }
 
     drawScreen() {
@@ -1005,6 +1034,7 @@ export class PatternMatchesGUI {
                     global.pendingDatabaseHexSearch = searchHex;
                     
                     // Close current GUI
+                    this.isSwitchingGui = true;
                     this.close();
                     
                     // Small delay then open database
