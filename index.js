@@ -2431,7 +2431,7 @@ register("command", function() {
 
 // Handle database/db subcommand
   if (arg1 && (arg1.toLowerCase() === "database" || arg1.toLowerCase() === "db")) {
-    dbGui.open();
+    dbGui.open(hexSearchText = arg2 ? arg2.toUpperCase() : null);
     return;
   }
   

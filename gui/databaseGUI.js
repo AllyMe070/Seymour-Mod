@@ -34,12 +34,12 @@ export class DatabaseGUI {
     this.cachedTierCounts = null;
 }
 
-    open() {
+    open(hexSearchText = null) {
     this.isOpen = true;
     this.scrollOffset = 0;
     this.searchText = "";
     this.searchBoxActive = false;
-    this.hexSearchText = "";
+    this.hexSearchText = "" + (hexSearchText || "");
     this.hexSearchBoxActive = false;
         
         // Convert PogObject to array
