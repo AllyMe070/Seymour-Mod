@@ -114,66 +114,14 @@ export class PatternMatchesGUI {
         // Calculate pattern counts - access array directly by index
         this.cachedPatternCounts = {};
         
-        // Manually count each pattern type (up to 20 patterns) - access array DIRECTLY
-        if (this.patternMatches.length > 0) {
-            this.cachedPatternCounts[this.patternMatches[0].type] = this.patternMatches[0].pieces.length;
-        }
-        if (this.patternMatches.length > 1) {
-            this.cachedPatternCounts[this.patternMatches[1].type] = this.patternMatches[1].pieces.length;
-        }
-        if (this.patternMatches.length > 2) {
-            this.cachedPatternCounts[this.patternMatches[2].type] = this.patternMatches[2].pieces.length;
-        }
-        if (this.patternMatches.length > 3) {
-            this.cachedPatternCounts[this.patternMatches[3].type] = this.patternMatches[3].pieces.length;
-        }
-        if (this.patternMatches.length > 4) {
-            this.cachedPatternCounts[this.patternMatches[4].type] = this.patternMatches[4].pieces.length;
-        }
-        if (this.patternMatches.length > 5) {
-            this.cachedPatternCounts[this.patternMatches[5].type] = this.patternMatches[5].pieces.length;
-        }
-        if (this.patternMatches.length > 6) {
-            this.cachedPatternCounts[this.patternMatches[6].type] = this.patternMatches[6].pieces.length;
-        }
-        if (this.patternMatches.length > 7) {
-            this.cachedPatternCounts[this.patternMatches[7].type] = this.patternMatches[7].pieces.length;
-        }
-        if (this.patternMatches.length > 8) {
-            this.cachedPatternCounts[this.patternMatches[8].type] = this.patternMatches[8].pieces.length;
-        }
-        if (this.patternMatches.length > 9) {
-            this.cachedPatternCounts[this.patternMatches[9].type] = this.patternMatches[9].pieces.length;
-        }
-        if (this.patternMatches.length > 10) {
-            this.cachedPatternCounts[this.patternMatches[10].type] = this.patternMatches[10].pieces.length;
-        }
-        if (this.patternMatches.length > 11) {
-            this.cachedPatternCounts[this.patternMatches[11].type] = this.patternMatches[11].pieces.length;
-        }
-        if (this.patternMatches.length > 12) {
-            this.cachedPatternCounts[this.patternMatches[12].type] = this.patternMatches[12].pieces.length;
-        }
-        if (this.patternMatches.length > 13) {
-            this.cachedPatternCounts[this.patternMatches[13].type] = this.patternMatches[13].pieces.length;
-        }
-        if (this.patternMatches.length > 14) {
-            this.cachedPatternCounts[this.patternMatches[14].type] = this.patternMatches[14].pieces.length;
-        }
-        if (this.patternMatches.length > 15) {
-            this.cachedPatternCounts[this.patternMatches[15].type] = this.patternMatches[15].pieces.length;
-        }
-        if (this.patternMatches.length > 16) {
-            this.cachedPatternCounts[this.patternMatches[16].type] = this.patternMatches[16].pieces.length;
-        }
-        if (this.patternMatches.length > 17) {
-            this.cachedPatternCounts[this.patternMatches[17].type] = this.patternMatches[17].pieces.length;
-        }
-        if (this.patternMatches.length > 18) {
-            this.cachedPatternCounts[this.patternMatches[18].type] = this.patternMatches[18].pieces.length;
-        }
-        if (this.patternMatches.length > 19) {
-            this.cachedPatternCounts[this.patternMatches[19].type] = this.patternMatches[19].pieces.length;
+        // Populate cachedPatternCounts from patternMatches
+        let pmIdx = 0;
+        while (pmIdx < this.patternMatches.length) {
+            const pm = this.patternMatches[pmIdx];
+            if (pm && pm.type) {
+                this.cachedPatternCounts[pm.type] = pm.pieces ? pm.pieces.length : 0;
+            }
+            pmIdx = pmIdx + 1;
         }
         // Pre-sort patterns for display
         this.sortedAxBxCx = [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
@@ -193,24 +141,12 @@ export class PatternMatchesGUI {
             } else if (pType === "palindrome") {
                 this.sortedPalindrome = pType;
             } else if (pType.indexOf("axbxcx_") === 0 && pType.length >= 8) {
-                const hexChar = pType.charAt(7);
-                
-                if (hexChar === "0") this.sortedAxBxCx[0] = pType;
-                else if (hexChar === "1") this.sortedAxBxCx[1] = pType;
-                else if (hexChar === "2") this.sortedAxBxCx[2] = pType;
-                else if (hexChar === "3") this.sortedAxBxCx[3] = pType;
-                else if (hexChar === "4") this.sortedAxBxCx[4] = pType;
-                else if (hexChar === "5") this.sortedAxBxCx[5] = pType;
-                else if (hexChar === "6") this.sortedAxBxCx[6] = pType;
-                else if (hexChar === "7") this.sortedAxBxCx[7] = pType;
-                else if (hexChar === "8") this.sortedAxBxCx[8] = pType;
-                else if (hexChar === "9") this.sortedAxBxCx[9] = pType;
-                else if (hexChar === "a") this.sortedAxBxCx[10] = pType;
-                else if (hexChar === "b") this.sortedAxBxCx[11] = pType;
-                else if (hexChar === "c") this.sortedAxBxCx[12] = pType;
-                else if (hexChar === "d") this.sortedAxBxCx[13] = pType;
-                else if (hexChar === "e") this.sortedAxBxCx[14] = pType;
-                else if (hexChar === "f") this.sortedAxBxCx[15] = pType;
+                // Map hex character (0-f) to index 0-15 and assign directly
+                const hexChar = pType.charAt(7).toLowerCase();
+                const idx = parseInt(hexChar, 16);
+                if (!isNaN(idx) && idx >= 0 && idx < 16) {
+                    this.sortedAxBxCx[idx] = pType;
+                }
             }
             
             sortIdx = sortIdx + 1;
@@ -498,126 +434,11 @@ export class PatternMatchesGUI {
         
         let currentY = startY;
         const numToRender = endIndex - startIndex;
-        
-        // Manual unroll (30 rows max)
-        if (numToRender > 0) {
-            this.drawRow(flatRows[startIndex + 0], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 1) {
-            this.drawRow(flatRows[startIndex + 1], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 2) {
-            this.drawRow(flatRows[startIndex + 2], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 3) {
-            this.drawRow(flatRows[startIndex + 3], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 4) {
-            this.drawRow(flatRows[startIndex + 4], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 5) {
-            this.drawRow(flatRows[startIndex + 5], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 6) {
-            this.drawRow(flatRows[startIndex + 6], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 7) {
-            this.drawRow(flatRows[startIndex + 7], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 8) {
-            this.drawRow(flatRows[startIndex + 8], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 9) {
-            this.drawRow(flatRows[startIndex + 9], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 10) {
-            this.drawRow(flatRows[startIndex + 10], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 11) {
-            this.drawRow(flatRows[startIndex + 11], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 12) {
-            this.drawRow(flatRows[startIndex + 12], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 13) {
-            this.drawRow(flatRows[startIndex + 13], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 14) {
-            this.drawRow(flatRows[startIndex + 14], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 15) {
-            this.drawRow(flatRows[startIndex + 15], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 16) {
-            this.drawRow(flatRows[startIndex + 16], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 17) {
-            this.drawRow(flatRows[startIndex + 17], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 18) {
-            this.drawRow(flatRows[startIndex + 18], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 19) {
-            this.drawRow(flatRows[startIndex + 19], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 20) {
-            this.drawRow(flatRows[startIndex + 20], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 21) {
-            this.drawRow(flatRows[startIndex + 21], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 22) {
-            this.drawRow(flatRows[startIndex + 22], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 23) {
-            this.drawRow(flatRows[startIndex + 23], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 24) {
-            this.drawRow(flatRows[startIndex + 24], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 25) {
-            this.drawRow(flatRows[startIndex + 25], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 26) {
-            this.drawRow(flatRows[startIndex + 26], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 27) {
-            this.drawRow(flatRows[startIndex + 27], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 28) {
-            this.drawRow(flatRows[startIndex + 28], currentY, width);
-            currentY = currentY + rowHeight;
-        }
-        if (numToRender > 29) {
-            this.drawRow(flatRows[startIndex + 29], currentY, width);
+
+        // Draw rows (cap at 30 rows max)
+        const maxRowsToRender = Math.min(numToRender, 30);
+        for (let i = 0; i < maxRowsToRender; i++) {
+            this.drawRow(flatRows[startIndex + i], currentY, width);
             currentY = currentY + rowHeight;
         }
         
@@ -727,22 +548,11 @@ export class PatternMatchesGUI {
     
     // Count total rows
     let totalRows = 0;
-    if (this.sortedAxBxCx[0]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[1]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[2]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[3]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[4]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[5]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[6]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[7]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[8]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[9]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[10]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[11]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[12]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[13]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[14]) totalRows = totalRows + 1;
-    if (this.sortedAxBxCx[15]) totalRows = totalRows + 1;
+    if (this.sortedAxBxCx && this.sortedAxBxCx.length) {
+        for (let i = 0; i < this.sortedAxBxCx.length; i++) {
+            if (this.sortedAxBxCx[i]) totalRows = totalRows + 1;
+        }
+    }
     if (this.sortedPaired) totalRows = totalRows + 1;
     if (this.sortedRepeating) totalRows = totalRows + 1;
     if (this.sortedPalindrome) totalRows = totalRows + 1;
@@ -790,70 +600,15 @@ export class PatternMatchesGUI {
         }
     };
     
-    // Draw in order: 0-F with colored backgrounds
-    if (this.sortedAxBxCx[0]) {
-        drawPatternRow(this.sortedAxBxCx[0], this.getPatternLabel(this.sortedAxBxCx[0]), this.cachedPatternCounts[this.sortedAxBxCx[0]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[1]) {
-        drawPatternRow(this.sortedAxBxCx[1], this.getPatternLabel(this.sortedAxBxCx[1]), this.cachedPatternCounts[this.sortedAxBxCx[1]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[2]) {
-        drawPatternRow(this.sortedAxBxCx[2], this.getPatternLabel(this.sortedAxBxCx[2]), this.cachedPatternCounts[this.sortedAxBxCx[2]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[3]) {
-        drawPatternRow(this.sortedAxBxCx[3], this.getPatternLabel(this.sortedAxBxCx[3]), this.cachedPatternCounts[this.sortedAxBxCx[3]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[4]) {
-        drawPatternRow(this.sortedAxBxCx[4], this.getPatternLabel(this.sortedAxBxCx[4]), this.cachedPatternCounts[this.sortedAxBxCx[4]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[5]) {
-        drawPatternRow(this.sortedAxBxCx[5], this.getPatternLabel(this.sortedAxBxCx[5]), this.cachedPatternCounts[this.sortedAxBxCx[5]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[6]) {
-        drawPatternRow(this.sortedAxBxCx[6], this.getPatternLabel(this.sortedAxBxCx[6]), this.cachedPatternCounts[this.sortedAxBxCx[6]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[7]) {
-        drawPatternRow(this.sortedAxBxCx[7], this.getPatternLabel(this.sortedAxBxCx[7]), this.cachedPatternCounts[this.sortedAxBxCx[7]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[8]) {
-        drawPatternRow(this.sortedAxBxCx[8], this.getPatternLabel(this.sortedAxBxCx[8]), this.cachedPatternCounts[this.sortedAxBxCx[8]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[9]) {
-        drawPatternRow(this.sortedAxBxCx[9], this.getPatternLabel(this.sortedAxBxCx[9]), this.cachedPatternCounts[this.sortedAxBxCx[9]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[10]) {
-        drawPatternRow(this.sortedAxBxCx[10], this.getPatternLabel(this.sortedAxBxCx[10]), this.cachedPatternCounts[this.sortedAxBxCx[10]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[11]) {
-        drawPatternRow(this.sortedAxBxCx[11], this.getPatternLabel(this.sortedAxBxCx[11]), this.cachedPatternCounts[this.sortedAxBxCx[11]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[12]) {
-        drawPatternRow(this.sortedAxBxCx[12], this.getPatternLabel(this.sortedAxBxCx[12]), this.cachedPatternCounts[this.sortedAxBxCx[12]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[13]) {
-        drawPatternRow(this.sortedAxBxCx[13], this.getPatternLabel(this.sortedAxBxCx[13]), this.cachedPatternCounts[this.sortedAxBxCx[13]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[14]) {
-        drawPatternRow(this.sortedAxBxCx[14], this.getPatternLabel(this.sortedAxBxCx[14]), this.cachedPatternCounts[this.sortedAxBxCx[14]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedAxBxCx[15]) {
-        drawPatternRow(this.sortedAxBxCx[15], this.getPatternLabel(this.sortedAxBxCx[15]), this.cachedPatternCounts[this.sortedAxBxCx[15]], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
+    // Draw in order 0-F with colored backgrounds
+    if (this.sortedAxBxCx && this.sortedAxBxCx.length) {
+        for (let i = 0; i < this.sortedAxBxCx.length; i++) {
+            const pType = this.sortedAxBxCx[i];
+            if (pType) {
+                drawPatternRow(pType, this.getPatternLabel(pType), this.cachedPatternCounts[pType], boxX + 10, currentY);
+                currentY = currentY + rowHeight;
+            }
+        }
     }
     
     // Then paired, repeating, palindrome (purple text, no box)
