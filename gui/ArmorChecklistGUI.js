@@ -18,6 +18,7 @@ export class ArmorChecklistGUI {
     this.isCalculating = false;
     this.calculationProgress = 0;
     this.calculationTotal = 0;
+    this.isSwitchingGui = false;
     
     // Persistent cache storage
     this.cacheStorage = new PogObject("ArmorChecklistModule", {
@@ -586,8 +587,28 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
         this.isOpen = true;
         this.scrollOffset = 0;
         
+        // Store the original GUI scale
+        const mc = Client.getMinecraft();
+        this.originalGuiScale = mc.field_71474_y.field_74335_Z;
+        
         const self = this;
         this.gui = new Gui();
+        
+        this.gui.registerOpened(() => {
+            // Force GUI scale to 2 when opening
+            const mc = Client.getMinecraft();
+            mc.field_71474_y.field_74335_Z = 2;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        });
+        
+        this.gui.registerClosed(() => {
+            // Restore original GUI scale when closing
+            const mc = Client.getMinecraft();
+            if (self.originalGuiScale !== undefined) {
+                mc.field_71474_y.field_74335_Z = self.originalGuiScale;
+                mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+            }
+        });
         
         this.gui.registerDraw(() => {
             if (self.isOpen) {
@@ -659,6 +680,12 @@ this.pageOrder = this.normalPageOrder; // Start with normal colors
     }
 
     close() {
+        const mc = Client.getMinecraft();
+        if (this.originalGuiScale !== undefined && !this.isSwitchingGui) {
+            mc.field_71474_y.field_74335_Z = this.originalGuiScale;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        }
+        
         this.isOpen = false;
         Client.currentGui.close();
     }
@@ -990,6 +1017,7 @@ handleClick(mouseX, mouseY, button) {
     
     if (actualMouseX >= dbButtonX && actualMouseX <= dbButtonX + dbButtonWidth &&
         actualMouseY >= dbButtonY && actualMouseY <= dbButtonY + 20) {
+        this.isSwitchingGui = true;
         this.close();
         ChatLib.command("seymour db", true);
         return;
@@ -2187,6 +2215,7 @@ handleContextMenuClick(mouseX, mouseY) {
     global.pendingDatabaseHexSearch = searchHex;
     
     // Close current GUI
+    this.isSwitchingGui = true;
     this.close();
     
     // Small delay then open database
@@ -2218,6 +2247,7 @@ handleContextMenuClick(mouseX, mouseY) {
     global.pendingDatabaseHexSearch = searchHex;
     
     // Close current GUI
+    this.isSwitchingGui = true;
     this.close();
     
     // Small delay then open database
@@ -2362,9 +2392,106 @@ calculateCurrentPageStats() {
     }.bind(this);
     
     // Manually call for each stage index
-    for (let i = 0; i < stages.length; i++) {
-    countStage(i);
-    }
+    countStage(0);
+    countStage(1);
+    countStage(2);
+    countStage(3);
+    countStage(4);
+    countStage(5);
+    countStage(6);
+    countStage(7);
+    countStage(8);
+    countStage(9);
+    countStage(10);
+    countStage(11);
+    countStage(12);
+    countStage(13);
+    countStage(14);
+    countStage(15);
+    countStage(16);
+    countStage(17);
+    countStage(18);
+    countStage(19);
+    countStage(20);
+    countStage(21);
+    countStage(22);
+    countStage(23);
+    countStage(24);
+    countStage(25);
+    countStage(26);
+    countStage(27);
+    countStage(28);
+    countStage(29);
+    countStage(30);
+    countStage(31);
+    countStage(32);
+    countStage(33);
+    countStage(34);
+    countStage(35);
+    countStage(36);
+    countStage(37);
+    countStage(38);
+    countStage(39);
+    countStage(40);
+    countStage(41);
+    countStage(42);
+    countStage(43);
+    countStage(44);
+    countStage(45);
+    countStage(46);
+    countStage(47);
+    countStage(48);
+    countStage(49);
+    countStage(50);
+    countStage(51);
+    countStage(52);
+    countStage(53);
+    countStage(54);
+    countStage(55);
+    countStage(56);
+    countStage(57);
+    countStage(58);
+    countStage(59);
+    countStage(60);
+    countStage(61);
+    countStage(62);
+    countStage(63);
+    countStage(64);
+    countStage(65);
+    countStage(66);
+    countStage(67);
+    countStage(68);
+    countStage(69);
+    countStage(70);
+    countStage(71);
+    countStage(72);
+    countStage(73);
+    countStage(74);
+    countStage(75);
+    countStage(76);
+    countStage(77);
+    countStage(78);
+    countStage(79);
+    countStage(80);
+    countStage(81);
+    countStage(82);
+    countStage(83);
+    countStage(84);
+    countStage(85);
+    countStage(86);
+    countStage(87);
+    countStage(88);
+    countStage(89);
+    countStage(90);
+    countStage(91);
+    countStage(92);
+    countStage(93);
+    countStage(94);
+    countStage(95);
+    countStage(96);
+    countStage(97);
+    countStage(98);
+    countStage(99);
     
     const filledTotal = t1Total + t2Total;
     const percentFilled = totalSlots > 0 ? ((filledTotal / totalSlots) * 100).toFixed(1) : "0.0";
