@@ -14,13 +14,34 @@ export class BestSetsGUI {
         this.calculationProgress = 0;
         this.contextMenu = null;
         this.clickableHexRegions = [];
+        this.isSwitchingGui = false;
     }
 
     open() {
         this.isOpen = true;
         
+        // Store the original GUI scale
+        const mc = Client.getMinecraft();
+        this.originalGuiScale = mc.field_71474_y.field_74335_Z;
+        
         const self = this;
         this.gui = new Gui();
+        
+        this.gui.registerOpened(() => {
+            // Force GUI scale to 2 when opening
+            const mc = Client.getMinecraft();
+            mc.field_71474_y.field_74335_Z = 2;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        });
+        
+        this.gui.registerClosed(() => {
+            // Restore original GUI scale when closing
+            const mc = Client.getMinecraft();
+            if (self.originalGuiScale !== undefined) {
+                mc.field_71474_y.field_74335_Z = self.originalGuiScale;
+                mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+            }
+        });
         
         this.gui.registerDraw(() => {
             if (self.isOpen) {
@@ -79,6 +100,12 @@ export class BestSetsGUI {
     }
 
     close() {
+        const mc = Client.getMinecraft();
+        if (this.originalGuiScale !== undefined && !this.isSwitchingGui) {
+            mc.field_71474_y.field_74335_Z = this.originalGuiScale;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        }
+        
         this.isOpen = false;
         Client.currentGui.close();
     }
@@ -749,6 +776,7 @@ export class BestSetsGUI {
                 if (option.action === "database") {
                     const searchHex = option.hex;
                     global.pendingDatabaseHexSearch = searchHex;
+                    this.isSwitchingGui = true;
                     this.close();
                     
                     setTimeout(() => {
