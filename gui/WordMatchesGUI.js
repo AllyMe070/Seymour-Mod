@@ -12,6 +12,7 @@ export class WordMatchesGUI {
         this.wordMatches = [];
         this.gui = null;
         this.contextMenu = null;
+        this.isSwitchingGui = false;
     }
     
     open() {
@@ -85,8 +86,28 @@ export class WordMatchesGUI {
         ChatLib.chat("§c[Word Matches] Error loading: " + e);
     }
     
+    // Store the original GUI scale
+    const mc = Client.getMinecraft();
+    this.originalGuiScale = mc.field_71474_y.field_74335_Z;
+    
     const self = this;
     this.gui = new Gui();
+    
+    this.gui.registerOpened(() => {
+        // Force GUI scale to 2 when opening
+        const mc = Client.getMinecraft();
+        mc.field_71474_y.field_74335_Z = 2;
+        mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+    });
+    
+    this.gui.registerClosed(() => {
+        // Restore original GUI scale when closing
+        const mc = Client.getMinecraft();
+        if (self.originalGuiScale !== undefined && !self.isSwitchingGui) {
+            mc.field_71474_y.field_74335_Z = self.originalGuiScale;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        }
+    });
     
     this.gui.registerDraw(() => {
         if (self.isOpen) {
@@ -149,6 +170,7 @@ export class WordMatchesGUI {
         
         if (actualMouseX >= backButtonX && actualMouseX <= backButtonX + backButtonWidth &&
             actualMouseY >= backButtonY && actualMouseY <= backButtonY + 20) {
+            self.isSwitchingGui = true;
             self.close();
             ChatLib.command("seymour db", true);
             return;
@@ -162,6 +184,17 @@ close() {
     this.isOpen = false;
     this.wordMatches = [];
     this.scrollOffset = 0;
+    
+    // Restore GUI scale BEFORE closing if not switching
+    const mc = Client.getMinecraft();
+    if (this.originalGuiScale !== undefined && !this.isSwitchingGui) {
+        mc.field_71474_y.field_74335_Z = this.originalGuiScale;
+        mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+    }
+    
+    // Reset the flag for next time
+    this.isSwitchingGui = false;
+    
     Client.currentGui.close();
 }
 
@@ -585,6 +618,7 @@ handleContextMenuClick(mouseX, mouseY) {
                 global.pendingDatabaseHexSearch = searchHex;
                 
                 // Close current GUI
+                this.isSwitchingGui = true;
                 this.close();
                 
                 // Small delay then open database
