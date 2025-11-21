@@ -8,6 +8,7 @@ export class DatabaseGUI {
     // Load the collection
     this.collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
     this.scrollOffset = 0;
+    this.isSwitchingGui = false;
     this.isOpen = false;
     this.allPieces = [];
     this.gui = null;
@@ -224,6 +225,8 @@ loadIndex = loadIndex + 1;
             self.hexSearchBoxActive = false;
             self.hexSearchText = "";
         } else {
+            // NOT switching to another GUI when pressing ESC, so restore scale
+            self.isSwitchingGui = false;
             self.close();
         }
     } else if (keyCode === 14) { // Backspace
@@ -394,6 +397,7 @@ const wordButtonY = height - 60;
 
 if (actualMouseX >= wordButtonX && actualMouseX <= wordButtonX + wordButtonWidth &&
     actualMouseY >= wordButtonY && actualMouseY <= wordButtonY + 20) {
+    self.isSwitchingGui = true;
     self.close();
     ChatLib.command("seymourwords", true);
     return;
@@ -407,12 +411,14 @@ const patternButtonY = height - 35;
 if (actualMouseX >= patternButtonX && actualMouseX <= patternButtonX + patternButtonWidth &&
     actualMouseY >= patternButtonY && actualMouseY <= patternButtonY + 20) {
     ChatLib.chat("§e[DEBUG] Pattern button clicked!");
+    self.isSwitchingGui = true;
     self.close();
     ChatLib.command("seymourpatterns", true);
     return;
 }  
         if (actualMouseX >= clButtonX && actualMouseX <= clButtonX + clButtonWidth &&
     actualMouseY >= clButtonY && actualMouseY <= clButtonY + 20) {
+    self.isSwitchingGui = true;
     self.close();
     ChatLib.command("seymour sets", true);
     return;
@@ -476,6 +482,8 @@ if (button === 0) {
     this.hexSearchText = global.pendingDatabaseHexSearch;
     this.hexSearchBoxActive = true;
     this.scrollOffset = 0;
+    this.sortColumn = null; // Clear any existing sort so auto-sort kicks in
+    this.cachedSortedPieces = null; // Clear sort cache
     ChatLib.chat("§a[Seymour GUI] §7Searching for: §f#" + this.hexSearchText);
     global.pendingDatabaseHexSearch = null; // Clear it
 }
@@ -485,12 +493,6 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
     }
 
     close() {
-    const mc = Client.getMinecraft();
-    if (this.originalGuiScale !== undefined) {
-        mc.field_71474_y.field_74335_Z = this.originalGuiScale;
-        mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
-    }
-    
     this.isOpen = false;
     this.allPieces = [];
     this.contextMenu = null;
@@ -503,6 +505,17 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
     this.cachedHexSearch = null;
     this.lastSearchText = "";
     this.lastHexSearchText = "";
+    
+    // Restore GUI scale BEFORE closing if not switching
+    const mc = Client.getMinecraft();
+    if (this.originalGuiScale !== undefined && !this.isSwitchingGui) {
+        mc.field_71474_y.field_74335_Z = this.originalGuiScale;
+        mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+    }
+    
+    // Reset the flag for next time
+    this.isSwitchingGui = false;
+    
     Client.currentGui.close();
 }
 
@@ -1577,6 +1590,25 @@ sortPieces(pieces) {
         this.lastSortColumn = this.sortColumn;
         this.lastSortDirection = this.sortDirection;
         
+        // Check if hex search is active with valid data
+        const hexSearchActive = this.hexSearchText && this.hexSearchText.replace("#", "").length === 6;
+        
+        // If no sort column is set AND hex search is active, auto-sort by distance
+        if (!this.sortColumn && hexSearchActive) {
+            const sorted = pieces.slice();
+            sorted.sort(function(a, b) {
+                const deltaA = a.cachedSearchDeltaE !== undefined ? a.cachedSearchDeltaE : 999;
+                const deltaB = b.cachedSearchDeltaE !== undefined ? b.cachedSearchDeltaE : 999;
+                
+                // Sort ascending: smallest deltaE first (0.00 at top)
+                if (deltaA < deltaB) return -1;
+                if (deltaA > deltaB) return 1;
+                return 0;
+            });
+            this.cachedSortedPieces = sorted;
+            return sorted;
+        }
+        
         if (!this.sortColumn) {
             this.cachedSortedPieces = pieces;
             return pieces;
@@ -1592,15 +1624,15 @@ sortPieces(pieces) {
             
             if (self.sortColumn === "name") {
     comparison = a.nameLower < b.nameLower ? -1 : (a.nameLower > b.nameLower ? 1 : 0);
-} else if (self.sortColumn === "hex") {
+    } else if (self.sortColumn === "hex") {
     comparison = a.hex < b.hex ? -1 : (a.hex > b.hex ? 1 : 0);
-} else if (self.sortColumn === "match") {
+    } else if (self.sortColumn === "match") {
     comparison = a.matchLower < b.matchLower ? -1 : (a.matchLower > b.matchLower ? 1 : 0);
-} else if (self.sortColumn === "deltaE") {
+    } else if (self.sortColumn === "deltaE") {
     comparison = a.deltaE < b.deltaE ? -1 : (a.deltaE > b.deltaE ? 1 : 0);
-} else if (self.sortColumn === "absolute") {
+    } else if (self.sortColumn === "absolute") {
     comparison = a.absoluteDistance < b.absoluteDistance ? -1 : (a.absoluteDistance > b.absoluteDistance ? 1 : 0);
-} else if (self.sortColumn === "distance") {
+    } else if (self.sortColumn === "distance") {
     // Use cached deltaE values
     const deltaA = a.cachedSearchDeltaE || 0;
     const deltaB = b.cachedSearchDeltaE || 0;
