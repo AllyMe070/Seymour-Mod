@@ -1,8 +1,8 @@
 {
   "name": "SeymourAnalyzer",
   "creator": "AllyMe",
-  "description": "Analyzes Seymour's Special Armor colors and matches them to known dyes",
-  "version": "1.0.2",
+  "description": "Analyzes Seymour Armour colors and matches them to known hypxel hexes with many more features",
+  "version": "1.1.0",
   "entry": "index.js",
   "requires": ["PogData"]
 }
