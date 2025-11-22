@@ -410,7 +410,6 @@ const patternButtonY = height - 35;
 
 if (actualMouseX >= patternButtonX && actualMouseX <= patternButtonX + patternButtonWidth &&
     actualMouseY >= patternButtonY && actualMouseY <= patternButtonY + 20) {
-    ChatLib.chat("§e[DEBUG] Pattern button clicked!");
     self.isSwitchingGui = true;
     self.close();
     ChatLib.command("seymourpatterns", true);
