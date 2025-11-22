@@ -18,239 +18,239 @@ export class PatternMatchesGUI {
     }
 
     open() {
-    this.isOpen = true;
-    this.scrollOffset = 0;
-    
-    // Build pattern matches from collection
-    this.patternMatches = [];
-    
-    try {
-        const collectionKeys = Object.keys(this.collection);
+        this.isOpen = true;
+        this.scrollOffset = 0;
         
-        let loadIndex = 0;
-        while (loadIndex < collectionKeys.length) {
-            const uuid = collectionKeys[loadIndex];
-            const piece = this.collection[uuid];
+        // Build pattern matches from collection
+        this.patternMatches = [];
+        
+        try {
+            const collectionKeys = Object.keys(this.collection);
             
-            if (!piece || typeof piece !== 'object') {
-                loadIndex = loadIndex + 1;
-                continue;
-            }
-            if (!piece.pieceName || !piece.hexcode || !piece.specialPattern) {
-                loadIndex = loadIndex + 1;
-                continue;
-            }
-            
-            // Store values in SEPARATE variables first
-            const storedUuid = "" + uuid;
-            const storedPieceName = "" + piece.pieceName;
-            const storedHexcode = ("" + piece.hexcode).toUpperCase();
-            // Normalize specialPattern: accept strings or objects.
-            let storedPattern = "";
-            if (piece.specialPattern && typeof piece.specialPattern === 'object') {
-                // Try common property names that might hold the pattern identifier
-                storedPattern = piece.specialPattern.type || piece.specialPattern.name || piece.specialPattern.pattern || JSON.stringify(piece.specialPattern);
-            } else {
-                storedPattern = "" + piece.specialPattern;
-            }
-            // Normalize to lower-case for consistent comparisons later
-            storedPattern = ("" + storedPattern).toLowerCase();
-            
-            // If it's an AxBxCx pattern, make it more specific based on the hex code
-            if (storedPattern.indexOf("axbxcx") === 0 || storedPattern === "axbxcx") {
-                const hexUpper = storedHexcode.toUpperCase();
-                if (hexUpper.length === 6) {
-                    const char0 = hexUpper.charAt(0);
-                    const char2 = hexUpper.charAt(2);
-                    const char4 = hexUpper.charAt(4);
-                    
-                    // Check if positions 0, 2, 4 are the same
-                    if (char0 === char2 && char2 === char4) {
-                        // Make the pattern specific: "axbxcx_6" for 6x6x6x
-                        storedPattern = "axbxcx_" + char0.toLowerCase();
-                    } else {
-                        // Not a repeating pattern, keep as generic axbxcx
-                        storedPattern = "axbxcx";
+            let loadIndex = 0;
+            while (loadIndex < collectionKeys.length) {
+                const uuid = collectionKeys[loadIndex];
+                const piece = this.collection[uuid];
+                
+                if (!piece || typeof piece !== 'object') {
+                    loadIndex = loadIndex + 1;
+                    continue;
+                }
+                if (!piece.pieceName || !piece.hexcode || !piece.specialPattern) {
+                    loadIndex = loadIndex + 1;
+                    continue;
+                }
+                
+                // Store values in SEPARATE variables first
+                const storedUuid = "" + uuid;
+                const storedPieceName = "" + piece.pieceName;
+                const storedHexcode = ("" + piece.hexcode).toUpperCase();
+                // Normalize specialPattern: accept strings or objects.
+                let storedPattern = "";
+                if (piece.specialPattern && typeof piece.specialPattern === 'object') {
+                    // Try common property names that might hold the pattern identifier
+                    storedPattern = piece.specialPattern.type || piece.specialPattern.name || piece.specialPattern.pattern || JSON.stringify(piece.specialPattern);
+                } else {
+                    storedPattern = "" + piece.specialPattern;
+                }
+                // Normalize to lower-case for consistent comparisons later
+                storedPattern = ("" + storedPattern).toLowerCase();
+                
+                // If it's an AxBxCx pattern, make it more specific based on the hex code
+                if (storedPattern.indexOf("axbxcx") === 0 || storedPattern === "axbxcx") {
+                    const hexUpper = storedHexcode.toUpperCase();
+                    if (hexUpper.length === 6) {
+                        const char0 = hexUpper.charAt(0);
+                        const char2 = hexUpper.charAt(2);
+                        const char4 = hexUpper.charAt(4);
+                        
+                        // Check if positions 0, 2, 4 are the same
+                        if (char0 === char2 && char2 === char4) {
+                            // Make the pattern specific: "axbxcx_6" for 6x6x6x
+                            storedPattern = "axbxcx_" + char0.toLowerCase();
+                        } else {
+                            // Not a repeating pattern, keep as generic axbxcx
+                            storedPattern = "axbxcx";
+                        }
                     }
                 }
-            }
-            
-            // Check if this pattern already exists in patternMatches array
-            let existingPatternIndex = -1;
-            let checkIdx = 0;
-            while (checkIdx < this.patternMatches.length) {
-                if (this.patternMatches[checkIdx].type === storedPattern) {
-                    existingPatternIndex = checkIdx;
-                    break;
-                }
-                checkIdx = checkIdx + 1;
-            }
-            
-            // Create piece object using stored variables
-            const newPiece = {};
-            newPiece.name = storedPieceName;
-            newPiece.hex = storedHexcode;
-            newPiece.uuid = storedUuid;
-            
-            // If pattern doesn't exist, create it
-            if (existingPatternIndex === -1) {
-                const newPatternEntry = {};
-                // store normalized type (lower-case string)
-                newPatternEntry.type = storedPattern;
-                newPatternEntry.pieces = [];
-                newPatternEntry.pieces.push(newPiece);
                 
-                this.patternMatches.push(newPatternEntry);
+                // Check if this pattern already exists in patternMatches array
+                let existingPatternIndex = -1;
+                let checkIdx = 0;
+                while (checkIdx < this.patternMatches.length) {
+                    if (this.patternMatches[checkIdx].type === storedPattern) {
+                        existingPatternIndex = checkIdx;
+                        break;
+                    }
+                    checkIdx = checkIdx + 1;
+                }
+                
+                // Create piece object using stored variables
+                const newPiece = {};
+                newPiece.name = storedPieceName;
+                newPiece.hex = storedHexcode;
+                newPiece.uuid = storedUuid;
+                
+                // If pattern doesn't exist, create it
+                if (existingPatternIndex === -1) {
+                    const newPatternEntry = {};
+                    // store normalized type (lower-case string)
+                    newPatternEntry.type = storedPattern;
+                    newPatternEntry.pieces = [];
+                    newPatternEntry.pieces.push(newPiece);
+                    
+                    this.patternMatches.push(newPatternEntry);
+                } else {
+                    // Pattern exists, add piece to it
+                    this.patternMatches[existingPatternIndex].pieces.push(newPiece);
+                }
+                
+                loadIndex = loadIndex + 1;
+            }
+            
+            ChatLib.chat("§a[Pattern Matches] §7Found §e" + this.patternMatches.length + " §7pattern types with matches");
+            
+            // Calculate pattern counts - access array directly by index
+            this.cachedPatternCounts = {};
+            
+            // Populate cachedPatternCounts from patternMatches
+            let pmIdx = 0;
+            while (pmIdx < this.patternMatches.length) {
+                const pm = this.patternMatches[pmIdx];
+                if (pm && pm.type) {
+                    this.cachedPatternCounts[pm.type] = pm.pieces ? pm.pieces.length : 0;
+                }
+                pmIdx = pmIdx + 1;
+            }
+            // Pre-sort patterns for display
+            this.sortedAxBxCx = [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+            this.sortedPaired = null;
+            this.sortedRepeating = null;
+            this.sortedPalindrome = null;
+            
+            const allPatternTypes = Object.keys(this.cachedPatternCounts);
+            let sortIdx = 0;
+            while (sortIdx < allPatternTypes.length) {
+                const pType = "" + allPatternTypes[sortIdx];
+                
+                if (pType === "paired") {
+                    this.sortedPaired = pType;
+                } else if (pType === "repeating") {
+                    this.sortedRepeating = pType;
+                } else if (pType === "palindrome") {
+                    this.sortedPalindrome = pType;
+                } else if (pType.indexOf("axbxcx_") === 0 && pType.length >= 8) {
+                    // Map hex character (0-f) to index 0-15 and assign directly
+                    const hexChar = pType.charAt(7).toLowerCase();
+                    const idx = parseInt(hexChar, 16);
+                    if (!isNaN(idx) && idx >= 0 && idx < 16) {
+                        this.sortedAxBxCx[idx] = pType;
+                    }
+                }
+                
+                sortIdx = sortIdx + 1;
+            }
+            
+            // Set default sort to pattern type A-Z
+            this.sortColumn = "pattern";
+            this.sortDirection = "asc";
+            
+        } catch (e) {
+            ChatLib.chat("§c[Pattern Matches] Error loading: " + e);
+        }
+        
+        // Store the original GUI scale
+        const mc = Client.getMinecraft();
+        this.originalGuiScale = mc.field_71474_y.field_74335_Z;
+        
+        const self = this;
+        this.gui = new Gui();
+        
+        this.gui.registerOpened(() => {
+            // Force GUI scale to 2 when opening
+            const mc = Client.getMinecraft();
+            mc.field_71474_y.field_74335_Z = 2;
+            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+        });
+        
+        this.gui.registerClosed(() => {
+            // Restore original GUI scale when closing
+            const mc = Client.getMinecraft();
+            if (self.originalGuiScale !== undefined) {
+                mc.field_71474_y.field_74335_Z = self.originalGuiScale;
+                mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
+            }
+        });
+        
+        this.gui.registerDraw(() => {
+            if (self.isOpen) {
+                self.drawScreen();
+            }
+        });
+        
+        this.gui.registerKeyTyped((char, keyCode) => {
+            if (keyCode === 1) { // ESC
+                self.close();
+            }
+        });
+        
+        this.gui.registerScrolled((x, y, direction) => {
+            // Build flat rows to calculate max scroll
+            let totalRows = 0;
+            let scrollIdx = 0;
+            while (scrollIdx < self.patternMatches.length) {
+                totalRows += self.patternMatches[scrollIdx].pieces.length;
+                scrollIdx = scrollIdx + 1;
+            }
+            
+            const height = Renderer.screen.getHeight();
+            const maxVisible = Math.floor((height - 110) / 20);
+            const maxScroll = Math.max(0, totalRows - maxVisible);
+            
+            if (direction === 1) {
+                self.scrollOffset = Math.max(0, self.scrollOffset - 1);
             } else {
-                // Pattern exists, add piece to it
-                this.patternMatches[existingPatternIndex].pieces.push(newPiece);
+                self.scrollOffset = Math.min(maxScroll, self.scrollOffset + 1);
+            }
+        });
+        
+        this.gui.registerClicked((mouseX, mouseY, button) => {
+            const Mouse = Java.type("org.lwjgl.input.Mouse");
+            const mc = Client.getMinecraft();
+            const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
+            const scale = scaledRes.func_78325_e();
+            const actualMouseX = Mouse.getX() / scale;
+            const actualMouseY = (mc.field_71440_d - Mouse.getY()) / scale;
+            
+            // Check for RIGHT CLICK
+            if (button === 1) {
+                self.handleRightClick(actualMouseX, actualMouseY);
+                return;
             }
             
-            loadIndex = loadIndex + 1;
-        }
-        
-        ChatLib.chat("§a[Pattern Matches] §7Found §e" + this.patternMatches.length + " §7pattern types with matches");
-        
-        // Calculate pattern counts - access array directly by index
-        this.cachedPatternCounts = {};
-        
-        // Populate cachedPatternCounts from patternMatches
-        let pmIdx = 0;
-        while (pmIdx < this.patternMatches.length) {
-            const pm = this.patternMatches[pmIdx];
-            if (pm && pm.type) {
-                this.cachedPatternCounts[pm.type] = pm.pieces ? pm.pieces.length : 0;
-            }
-            pmIdx = pmIdx + 1;
-        }
-        // Pre-sort patterns for display
-        this.sortedAxBxCx = [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
-        this.sortedPaired = null;
-        this.sortedRepeating = null;
-        this.sortedPalindrome = null;
-        
-        const allPatternTypes = Object.keys(this.cachedPatternCounts);
-        let sortIdx = 0;
-        while (sortIdx < allPatternTypes.length) {
-            const pType = "" + allPatternTypes[sortIdx];
-            
-            if (pType === "paired") {
-                this.sortedPaired = pType;
-            } else if (pType === "repeating") {
-                this.sortedRepeating = pType;
-            } else if (pType === "palindrome") {
-                this.sortedPalindrome = pType;
-            } else if (pType.indexOf("axbxcx_") === 0 && pType.length >= 8) {
-                // Map hex character (0-f) to index 0-15 and assign directly
-                const hexChar = pType.charAt(7).toLowerCase();
-                const idx = parseInt(hexChar, 16);
-                if (!isNaN(idx) && idx >= 0 && idx < 16) {
-                    this.sortedAxBxCx[idx] = pType;
+            // Check for LEFT CLICK
+            if (button === 0) {
+                // Check context menu first
+                if (self.contextMenu) {
+                    self.handleContextMenuClick(actualMouseX, actualMouseY);
+                    return;
+                }
+                
+                // Check back button
+                const backButtonWidth = 150;
+                const backButtonX = 20;
+                const backButtonY = 10;
+                
+                if (actualMouseX >= backButtonX && actualMouseX <= backButtonX + backButtonWidth &&
+                    actualMouseY >= backButtonY && actualMouseY <= backButtonY + 20) {
+                    self.isSwitchingGui = true;
+                    self.close();
+                    ChatLib.command("seymour db", true);
+                    return;
                 }
             }
-            
-            sortIdx = sortIdx + 1;
-        }
-        
-        // Set default sort to pattern type A-Z
-        this.sortColumn = "pattern";
-        this.sortDirection = "asc";
-        
-    } catch (e) {
-        ChatLib.chat("§c[Pattern Matches] Error loading: " + e);
-    }
-    
-    // Store the original GUI scale
-    const mc = Client.getMinecraft();
-    this.originalGuiScale = mc.field_71474_y.field_74335_Z;
-    
-    const self = this;
-    this.gui = new Gui();
-    
-    this.gui.registerOpened(() => {
-        // Force GUI scale to 2 when opening
-        const mc = Client.getMinecraft();
-        mc.field_71474_y.field_74335_Z = 2;
-        mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
-    });
-    
-    this.gui.registerClosed(() => {
-        // Restore original GUI scale when closing
-        const mc = Client.getMinecraft();
-        if (self.originalGuiScale !== undefined) {
-            mc.field_71474_y.field_74335_Z = self.originalGuiScale;
-            mc.func_71373_a(new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc));
-        }
-    });
-    
-    this.gui.registerDraw(() => {
-        if (self.isOpen) {
-            self.drawScreen();
-        }
-    });
-    
-    this.gui.registerKeyTyped((char, keyCode) => {
-        if (keyCode === 1) { // ESC
-            self.close();
-        }
-    });
-    
-    this.gui.registerScrolled((x, y, direction) => {
-        // Build flat rows to calculate max scroll
-        let totalRows = 0;
-        let scrollIdx = 0;
-        while (scrollIdx < self.patternMatches.length) {
-            totalRows += self.patternMatches[scrollIdx].pieces.length;
-            scrollIdx = scrollIdx + 1;
-        }
-        
-        const height = Renderer.screen.getHeight();
-        const maxVisible = Math.floor((height - 110) / 20);
-        const maxScroll = Math.max(0, totalRows - maxVisible);
-        
-        if (direction === 1) {
-            self.scrollOffset = Math.max(0, self.scrollOffset - 1);
-        } else {
-            self.scrollOffset = Math.min(maxScroll, self.scrollOffset + 1);
-        }
-    });
-    
-    this.gui.registerClicked((mouseX, mouseY, button) => {
-        const Mouse = Java.type("org.lwjgl.input.Mouse");
-        const mc = Client.getMinecraft();
-        const scaledRes = new (Java.type("net.minecraft.client.gui.ScaledResolution"))(mc);
-        const scale = scaledRes.func_78325_e();
-        const actualMouseX = Mouse.getX() / scale;
-        const actualMouseY = (mc.field_71440_d - Mouse.getY()) / scale;
-        
-        // Check for RIGHT CLICK
-        if (button === 1) {
-            self.handleRightClick(actualMouseX, actualMouseY);
-            return;
-        }
-        
-        // Check for LEFT CLICK
-        if (button === 0) {
-            // Check context menu first
-            if (self.contextMenu) {
-                self.handleContextMenuClick(actualMouseX, actualMouseY);
-                return;
-            }
-            
-            // Check back button
-            const backButtonWidth = 150;
-            const backButtonX = 20;
-            const backButtonY = 10;
-            
-            if (actualMouseX >= backButtonX && actualMouseX <= backButtonX + backButtonWidth &&
-                actualMouseY >= backButtonY && actualMouseY <= backButtonY + 20) {
-                self.isSwitchingGui = true;
-                self.close();
-                ChatLib.command("seymour db", true);
-                return;
-            }
-        }
-           // Check header clicks for sorting
+            // Check header clicks for sorting
             const headerY = 50;
             if (actualMouseY >= headerY && actualMouseY <= headerY + 12) {
                 let clickedColumn = null;
@@ -278,17 +278,17 @@ export class PatternMatchesGUI {
                     return;
                 }
             }
-    });
-    
-    this.gui.open();
-}
+        });
+        
+        this.gui.open();
+    }
 
     close() {
         this.isOpen = false;
         this.patternMatches = [];
         this.scrollOffset = 0;
         Client.currentGui.close();
-        
+
         // Restore GUI scale AFTER closing (so it happens after registerClosed)
         const mc = Client.getMinecraft();
         if (this.originalGuiScale !== undefined && !this.isSwitchingGui) {
@@ -451,42 +451,42 @@ export class PatternMatchesGUI {
     }
 
     drawRow(row, y, screenWidth) {
-    // Always show pattern type and description (removed the isFirstPieceOfPattern check)
-    let patternName = "UNKNOWN";
-    const pType = (row.patternType || "").toLowerCase();
-    
-    if (pType === "paired") {
-        patternName = "PAIRED";
-    } else if (pType === "repeating") {
-        patternName = "REPEATING";
-    } else if (pType === "palindrome") {
-        patternName = "PALINDROME";
-    } else if (pType.indexOf("axbxcx") === 0) {
-        patternName = "AxBxCx";
+        // Always show pattern type and description (removed the isFirstPieceOfPattern check)
+        let patternName = "UNKNOWN";
+        const pType = (row.patternType || "").toLowerCase();
+        
+        if (pType === "paired") {
+            patternName = "PAIRED";
+        } else if (pType === "repeating") {
+            patternName = "REPEATING";
+        } else if (pType === "palindrome") {
+            patternName = "PALINDROME";
+        } else if (pType.indexOf("axbxcx") === 0) {
+            patternName = "AxBxCx";
+        }
+        
+        Renderer.drawStringWithShadow("§5§l" + patternName, 20, y + 4);
+        Renderer.drawStringWithShadow("§f" + row.description, 180, y + 4);
+        
+        // Piece name
+        let displayName = row.pieceName;
+        if (displayName.length > 30) {
+            displayName = displayName.substring(0, 30) + "...";
+        }
+        Renderer.drawStringWithShadow("§7" + displayName, 370, y + 4);
+        
+        // Hex box
+        const rgb = this.hexToRgb(row.pieceHex);
+        Renderer.drawRect(Renderer.color(rgb.r, rgb.g, rgb.b), 580, y, 85, 16);
+        
+        // Use shadow for white text on dark colors, draw black text for light colors
+        if (this.isColorDark(row.pieceHex)) {
+            Renderer.drawStringWithShadow("§f" + row.pieceHex, 582, y + 4);
+        } else {
+            Renderer.drawString("§0" + row.pieceHex, 582, y + 4);
+            Renderer.drawString("§0" + row.pieceHex, 582.5, y + 4.5);
+        }
     }
-    
-    Renderer.drawStringWithShadow("§5§l" + patternName, 20, y + 4);
-    Renderer.drawStringWithShadow("§f" + row.description, 180, y + 4);
-    
-    // Piece name
-    let displayName = row.pieceName;
-    if (displayName.length > 30) {
-        displayName = displayName.substring(0, 30) + "...";
-    }
-    Renderer.drawStringWithShadow("§7" + displayName, 370, y + 4);
-    
-    // Hex box
-    const rgb = this.hexToRgb(row.pieceHex);
-    Renderer.drawRect(Renderer.color(rgb.r, rgb.g, rgb.b), 580, y, 85, 16);
-    
-    // Use shadow for white text on dark colors, draw black text for light colors
-    if (this.isColorDark(row.pieceHex)) {
-        Renderer.drawStringWithShadow("§f" + row.pieceHex, 582, y + 4);
-    } else {
-        Renderer.drawString("§0" + row.pieceHex, 582, y + 4);
-        Renderer.drawString("§0" + row.pieceHex, 582.5, y + 4.5);
-    }
-}
 
     hexToRgb(hex) {
         hex = hex.replace("#", "").toUpperCase();
@@ -538,110 +538,110 @@ export class PatternMatchesGUI {
     }
 
     drawPatternCounter(screenWidth, screenHeight) {
-    if (!this.cachedPatternCounts) {
-        return;
-    }
-    
-    const boxWidth = 150;
-    const boxX = screenWidth - boxWidth - 20;
-    const boxY = 70;
-    
-    // Count total rows
-    let totalRows = 0;
-    if (this.sortedAxBxCx && this.sortedAxBxCx.length) {
-        for (let i = 0; i < this.sortedAxBxCx.length; i++) {
-            if (this.sortedAxBxCx[i]) totalRows = totalRows + 1;
+        if (!this.cachedPatternCounts) {
+            return;
         }
-    }
-    if (this.sortedPaired) totalRows = totalRows + 1;
-    if (this.sortedRepeating) totalRows = totalRows + 1;
-    if (this.sortedPalindrome) totalRows = totalRows + 1;
-    
-    const rowHeight = 12;
-    const boxHeight = (totalRows * rowHeight) + 20;
-    
-    // Background
-    Renderer.drawRect(Renderer.color(40, 40, 40, 200), boxX, boxY, boxWidth, boxHeight);
-    
-    // Border
-    const borderColor = Renderer.color(100, 100, 100, 200);
-    Renderer.drawRect(borderColor, boxX, boxY, boxWidth, 2);
-    Renderer.drawRect(borderColor, boxX, boxY + boxHeight - 2, boxWidth, 2);
-    Renderer.drawRect(borderColor, boxX, boxY, 2, boxHeight);
-    Renderer.drawRect(borderColor, boxX + boxWidth - 2, boxY, 2, boxHeight);
-    
-    // Title
-    Renderer.drawStringWithShadow("§l§7Pattern Counts", boxX + 5, boxY + 5);
-    
-    let currentY = boxY + 18;
-    
-    // Helper to draw pattern with color box
-    const self = this;
-    const drawPatternRow = function(patternType, label, count, x, y) {
-        if (patternType.indexOf("axbxcx_") === 0) {
-            const char = patternType.charAt(7);
-            const hex = char + char + char + char + char + char;
-            const rgb = self.hexToRgb(hex);
-            
-            // Draw colored box
-            Renderer.drawRect(Renderer.color(rgb.r, rgb.g, rgb.b), x, y, 45, 10);
-            
-            // Determine if we need white or black text based on brightness
-            const brightness = (rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114) / 255;
-            const textColor = brightness > 0.5 ? "§0" : "§f";
-            
-            // Draw label on the colored box
-            Renderer.drawString(textColor + label + ":", x + 2, y + 1);
-            
-            // Draw count in white after the box
-            Renderer.drawStringWithShadow("§f" + count, x + 50, y + 1);
-        } else {
-            Renderer.drawStringWithShadow("§5" + label + ": §f" + count, x, y);
-        }
-    };
-    
-    // Draw in order 0-F with colored backgrounds
-    if (this.sortedAxBxCx && this.sortedAxBxCx.length) {
-        for (let i = 0; i < this.sortedAxBxCx.length; i++) {
-            const pType = this.sortedAxBxCx[i];
-            if (pType) {
-                drawPatternRow(pType, this.getPatternLabel(pType), this.cachedPatternCounts[pType], boxX + 10, currentY);
-                currentY = currentY + rowHeight;
+        
+        const boxWidth = 150;
+        const boxX = screenWidth - boxWidth - 20;
+        const boxY = 70;
+        
+        // Count total rows
+        let totalRows = 0;
+        if (this.sortedAxBxCx && this.sortedAxBxCx.length) {
+            for (let i = 0; i < this.sortedAxBxCx.length; i++) {
+                if (this.sortedAxBxCx[i]) totalRows = totalRows + 1;
             }
         }
+        if (this.sortedPaired) totalRows = totalRows + 1;
+        if (this.sortedRepeating) totalRows = totalRows + 1;
+        if (this.sortedPalindrome) totalRows = totalRows + 1;
+        
+        const rowHeight = 12;
+        const boxHeight = (totalRows * rowHeight) + 20;
+        
+        // Background
+        Renderer.drawRect(Renderer.color(40, 40, 40, 200), boxX, boxY, boxWidth, boxHeight);
+        
+        // Border
+        const borderColor = Renderer.color(100, 100, 100, 200);
+        Renderer.drawRect(borderColor, boxX, boxY, boxWidth, 2);
+        Renderer.drawRect(borderColor, boxX, boxY + boxHeight - 2, boxWidth, 2);
+        Renderer.drawRect(borderColor, boxX, boxY, 2, boxHeight);
+        Renderer.drawRect(borderColor, boxX + boxWidth - 2, boxY, 2, boxHeight);
+        
+        // Title
+        Renderer.drawStringWithShadow("§l§7Pattern Counts", boxX + 5, boxY + 5);
+        
+        let currentY = boxY + 18;
+        
+        // Helper to draw pattern with color box
+        const self = this;
+        const drawPatternRow = function(patternType, label, count, x, y) {
+            if (patternType.indexOf("axbxcx_") === 0) {
+                const char = patternType.charAt(7);
+                const hex = char + char + char + char + char + char;
+                const rgb = self.hexToRgb(hex);
+                
+                // Draw colored box
+                Renderer.drawRect(Renderer.color(rgb.r, rgb.g, rgb.b), x, y, 45, 10);
+                
+                // Determine if we need white or black text based on brightness
+                const brightness = (rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114) / 255;
+                const textColor = brightness > 0.5 ? "§0" : "§f";
+                
+                // Draw label on the colored box
+                Renderer.drawString(textColor + label + ":", x + 2, y + 1);
+                
+                // Draw count in white after the box
+                Renderer.drawStringWithShadow("§f" + count, x + 50, y + 1);
+            } else {
+                Renderer.drawStringWithShadow("§5" + label + ": §f" + count, x, y);
+            }
+        };
+        
+        // Draw in order 0-F with colored backgrounds
+        if (this.sortedAxBxCx && this.sortedAxBxCx.length) {
+            for (let i = 0; i < this.sortedAxBxCx.length; i++) {
+                const pType = this.sortedAxBxCx[i];
+                if (pType) {
+                    drawPatternRow(pType, this.getPatternLabel(pType), this.cachedPatternCounts[pType], boxX + 10, currentY);
+                    currentY = currentY + rowHeight;
+                }
+            }
+        }
+        
+        // Then paired, repeating, palindrome (purple text, no box)
+        if (this.sortedPaired) {
+            Renderer.drawStringWithShadow("§5Paired: §f" + this.cachedPatternCounts[this.sortedPaired], boxX + 10, currentY);
+            currentY = currentY + rowHeight;
+        }
+        if (this.sortedRepeating) {
+            Renderer.drawStringWithShadow("§5Repeating: §f" + this.cachedPatternCounts[this.sortedRepeating], boxX + 10, currentY);
+            currentY = currentY + rowHeight;
+        }
+        if (this.sortedPalindrome) {
+            Renderer.drawStringWithShadow("§5Palindrome: §f" + this.cachedPatternCounts[this.sortedPalindrome], boxX + 10, currentY);
+            currentY = currentY + rowHeight;
+        }
     }
-    
-    // Then paired, repeating, palindrome (purple text, no box)
-    if (this.sortedPaired) {
-        Renderer.drawStringWithShadow("§5Paired: §f" + this.cachedPatternCounts[this.sortedPaired], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedRepeating) {
-        Renderer.drawStringWithShadow("§5Repeating: §f" + this.cachedPatternCounts[this.sortedRepeating], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-    if (this.sortedPalindrome) {
-        Renderer.drawStringWithShadow("§5Palindrome: §f" + this.cachedPatternCounts[this.sortedPalindrome], boxX + 10, currentY);
-        currentY = currentY + rowHeight;
-    }
-}
     
     getPatternLabel(patternType) {
-    const pType = ("" + patternType).toLowerCase();
-    
-    if (pType === "paired") return "Paired";
-    if (pType === "repeating") return "Repeating";
-    if (pType === "palindrome") return "Palindrome";
-    
-    if (pType.indexOf("axbxcx_") === 0) {
-        const char = pType.charAt(7).toUpperCase();
-        return char + "x" + char + "x" + char + "x";
+        const pType = ("" + patternType).toLowerCase();
+        
+        if (pType === "paired") return "Paired";
+        if (pType === "repeating") return "Repeating";
+        if (pType === "palindrome") return "Palindrome";
+        
+        if (pType.indexOf("axbxcx_") === 0) {
+            const char = pType.charAt(7).toUpperCase();
+            return char + "x" + char + "x" + char + "x";
+        }
+        
+        if (pType === "axbxcx") return "AxBxCx";
+        
+        return "Unknown";
     }
-    
-    if (pType === "axbxcx") return "AxBxCx";
-    
-    return "Unknown";
-}
 
     handleRightClick(mouseX, mouseY) {
         const headerY = 50;
