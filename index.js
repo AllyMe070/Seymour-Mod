@@ -3223,7 +3223,7 @@ if (arg1 && arg1.toLowerCase() === "clear") {
   ChatLib.chat("§8§m----------------------------------------------------");
   ChatLib.chat("§a§l[Seymour Analyzer] §7Commands:");
   ChatLib.chat("§f/seymour §7- Show this help menu");
-  ChatLib.chat("§e/seymour database §7- Open database");
+  ChatLib.chat("§e/seymour database <hex> §7- Open database (optionally with a hex to search matches to)");
   ChatLib.chat("§e/seymour checklist §7- Open armor checklist");
   ChatLib.chat("§e/seymour bestsets §7- Find best matching 4-piece sets");
   ChatLib.chat("§e/seymour stats §7- Print the amount of T1/T2/Dupes in chat")
