@@ -2446,6 +2446,57 @@ register("command", function() {
     bestSetsGui.open();
     return;
   }
+
+  // Handle stats subcommand
+  if (arg1 && arg1.toLowerCase() === "stats") {
+    try {
+      const collectionKeys = Object.keys(collection);
+      const total = collectionKeys.length;
+
+      let t1lt = 0; // T1<
+      let t1 = 0;
+      let t2 = 0;
+      let t3plus = 0;
+
+      const hexCounts = {};
+
+      for (let i = 0; i < collectionKeys.length; i++) {
+        const uuid = collectionKeys[i];
+        const piece = collection[uuid];
+        if (!piece || !piece.bestMatch) continue;
+
+        const tier = piece.bestMatch.tier;
+        if (tier === 0) t1lt++;
+        else if (tier === 1) t1++;
+        else if (tier === 2) t2++;
+        else t3plus++;
+
+        const hex = (piece.hexcode || "").toUpperCase();
+        if (hex) {
+          hexCounts[hex] = (hexCounts[hex] || 0) + 1;
+        }
+      }
+
+      let dupeGroups = 0;
+      let dupePieces = 0;
+      for (const h in hexCounts) {
+        if (hexCounts[h] > 1) {
+          dupeGroups++;
+          dupePieces += hexCounts[h];
+        }
+      }
+
+      ChatLib.chat("§8§m----------------------------------------------------");
+      ChatLib.chat("§a§l[Seymour Analyzer] §7- Collection Stats");
+      ChatLib.chat("§7Total pieces: §e" + total);
+      ChatLib.chat("§7T1<: §2" + t1lt + " §7| T1: §2" + t1 + " §7| T2: §6" + t2 + " §7| T3+: §7" + t3plus);
+      ChatLib.chat("§7Duplicate hex groups: §e" + dupeGroups + " §7(affecting §c" + dupePieces + " §7pieces)");
+      ChatLib.chat("§8§m----------------------------------------------------");
+    } catch (e) {
+      ChatLib.chat("§c[Seymour] Failed to calculate stats: " + e);
+    }
+    return;
+  }
   
   // Handle scan subcommand
   if (arg1 && arg1.toLowerCase() === "scan") {
@@ -3175,6 +3226,7 @@ if (arg1 && arg1.toLowerCase() === "clear") {
   ChatLib.chat("§e/seymour database §7- Open database");
   ChatLib.chat("§e/seymour checklist §7- Open armor checklist");
   ChatLib.chat("§e/seymour bestsets §7- Find best matching 4-piece sets");
+  ChatLib.chat("§e/seymour stats §7- Print the amount of T1/T2/Dupes in chat")
   ChatLib.chat("§a/seymour scan start §7- Start scanning pieces");
   ChatLib.chat("§a/seymour scan stop §7- Stop scanning pieces");
   ChatLib.chat("§c/seymour rebuild §7- Show all rebuild commands");
