@@ -34,10 +34,10 @@ export class DatabaseGUI {
         this.cachedTierCounts = null;
     }
 
-    open(hexSearchText = null) {
+    open(hexSearchText = null, searchText = null) {
         this.isOpen = true;
         this.scrollOffset = 0;
-        this.searchText = "";
+        this.searchText = "" + (searchText || "");
         this.searchBoxActive = false;
         this.hexSearchText = "" + (hexSearchText || "");
         this.hexSearchBoxActive = false;

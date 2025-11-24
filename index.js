@@ -315,6 +315,7 @@ setTimeout(function() {
 }, 500);
 
 let scanningEnabled = false;
+let exportingEnabled = false;
 
 // ===== COLOR MATH =====
 function hexToRgb(hex) {
@@ -1309,7 +1310,7 @@ function checkForDupeHex(itemHex, itemUuid) {
 
 // ===== SCAN CHEST CONTENTS =====
 function scanChestContents() {
-  if (!scanningEnabled) return;
+  if (!scanningEnabled && !exportingEnabled) return;
   
   try {
     const container = Player.getContainer();
@@ -1331,7 +1332,7 @@ function scanChestContents() {
       const uuid = extractUuidFromItem(item);
       if (!uuid) continue;
       
-      if (collection[uuid]) continue;
+      if (collection[uuid] && !exportingEnabled) continue;
       
       const loreRaw = item.getLore();
       const itemHex = extractHexFromLore(loreRaw);
@@ -1354,47 +1355,75 @@ function scanChestContents() {
       const specialPattern = matchesSpecialPattern(storedHex);
       
       // Store top 3 matches
-const top3Matches = [];
-for (let m = 0; m < 3 && m < analysis.top3Matches.length; m++) {
-  const match = analysis.top3Matches[m];
-  const matchRgb = hexToRgb(match.targetHex);
-  const matchAbsoluteDist = Math.abs(itemRgb.r - matchRgb.r) + 
-                            Math.abs(itemRgb.g - matchRgb.g) + 
-                            Math.abs(itemRgb.b - matchRgb.b);
-  
-  top3Matches[m] = {
-    colorName: match.name,
-    targetHex: match.targetHex,
-    deltaE: match.deltaE,
-    absoluteDistance: matchAbsoluteDist,
-    tier: match.tier
-  };
-}
+      const top3Matches = [];
+      for (let m = 0; m < 3 && m < analysis.top3Matches.length; m++) {
+        const match = analysis.top3Matches[m];
+        const matchRgb = hexToRgb(match.targetHex);
+        const matchAbsoluteDist = Math.abs(itemRgb.r - matchRgb.r) + 
+                                  Math.abs(itemRgb.g - matchRgb.g) + 
+                                  Math.abs(itemRgb.b - matchRgb.b);
+        
+        top3Matches[m] = {
+          colorName: match.name,
+          targetHex: match.targetHex,
+          deltaE: match.deltaE,
+          absoluteDistance: matchAbsoluteDist,
+          tier: match.tier
+        };
+      }
+      if (!exportingEnabled) {
+        collection[uuid] = {
+          pieceName: ChatLib.removeFormatting(itemName),
+          uuid: uuid,
+          hexcode: storedHex,
+          specialPattern: specialPattern ? specialPattern.type : null,
+          bestMatch: {
+            colorName: best.name,
+            targetHex: best.targetHex,
+            deltaE: best.deltaE,
+            absoluteDistance: absoluteDist,
+            tier: analysis.tier
+          },
+          allMatches: top3Matches,
+          wordMatch: wordMatch ? wordMatch.word : null,
+          chestLocation: chestLoc,
+          timestamp: Date.now()
+        };
+      }
+      if (exportingEnabled) {
+        // Ensure a plain in-memory object exists to hold export pieces (not a PogObject)
+        if (typeof exportCollection === "undefined" || exportCollection === null) {
+          exportCollection = {};
+        }
 
-collection[uuid] = {
-  pieceName: ChatLib.removeFormatting(itemName),
-  uuid: uuid,
-  hexcode: storedHex,
-  specialPattern: specialPattern ? specialPattern.type : null,
-  bestMatch: {
-    colorName: best.name,
-    targetHex: best.targetHex,
-    deltaE: best.deltaE,
-    absoluteDistance: absoluteDist,
-    tier: analysis.tier
-  },
-  allMatches: top3Matches,
-  wordMatch: wordMatch ? wordMatch.word : null,
-  chestLocation: chestLoc,
-  timestamp: Date.now()
-};
-      
-      scannedCount++;
+        if (!exportCollection[uuid]) {
+          exportCollection[uuid] = {
+            pieceName: ChatLib.removeFormatting(itemName),
+            uuid: uuid,
+            hexcode: storedHex,
+            specialPattern: specialPattern ? specialPattern.type : null,
+            bestMatch: {
+              colorName: best.name,
+              targetHex: best.targetHex,
+              deltaE: best.deltaE,
+              absoluteDistance: absoluteDist,
+              tier: analysis.tier
+            },
+            allMatches: top3Matches,
+            wordMatch: wordMatch ? wordMatch.word : null,
+            chestLocation: chestLoc,
+            timestamp: Date.now()
+          };
+        }
+      }
+    scannedCount++;
     }
-    
-    if (scannedCount > 0) {
+    if (scannedCount > 0 && !exportingEnabled) {
       collection.save();
       ChatLib.chat("§a[Seymour Analyzer] §7Scanned §e" + scannedCount + "§7 new piece" + (scannedCount === 1 ? "" : "s") + "! Total: §e" + Object.keys(collection).length);
+    }
+    else if (scannedCount > 0 && exportingEnabled) {
+      ChatLib.chat("§a[Seymour Analyzer] §7Added §e" + scannedCount + "§7 piece" + (scannedCount === 1 ? "" : "s") + " to export collection! Total: §e" + Object.keys(exportCollection).length);
     }
     
   } catch (e) {
@@ -1423,7 +1452,7 @@ register("guiOpened", function() {
     isPrecaching = false;
   }, 20);
   
-  if (!scanningEnabled) return;
+  if (!scanningEnabled && !exportingEnabled) return;
   
   if (scanTimeout) clearTimeout(scanTimeout);
   
@@ -2430,8 +2459,18 @@ register("command", function() {
     const arg2 = args[1];
 
 // Handle database/db subcommand
+    let hexSearchText = null;
+    let searchText = null;
   if (arg1 && (arg1.toLowerCase() === "database" || arg1.toLowerCase() === "db")) {
-    dbGui.open(hexSearchText = arg2 ? arg2.toUpperCase() : null);
+    if (arg2) {
+      ChatLib.chat("arg2 is: " + arg2);
+      if (!arg2.toLowerCase().includes("x")) {
+        hexSearchText = arg2.toLowerCase();
+      } else {
+        searchText = arg2.toLowerCase();
+      }
+    }
+    dbGui.open((hexSearchText ? hexSearchText : null) , (searchText ? searchText : null));
     return;
   }
   
@@ -2497,6 +2536,66 @@ register("command", function() {
     }
     return;
   }
+
+  // Handle export subcommand
+  if (arg1 && arg1.toLowerCase() === "export") {
+    if (!arg2) {
+      ChatLib.chat("§a[Seymour Analyzer] §7Usage: /seymour export <start|stop>");
+      return;
+    }
+    if (arg2.toLowerCase() === "start") {
+      if (scanningEnabled) {
+        ChatLib.chat("§a[Seymour Analyzer] §cPlease stop scanning before starting export!");
+        return;
+      }
+      ChatLib.chat("§a[Seymour Analyzer] §7Exporting §astarted§7! Scanned pieces will be collected for export.");
+      exportingEnabled = true;
+      return;
+    } else if (arg2.toLowerCase() === "stop") {
+      exportingEnabled = false;
+      ChatLib.chat("§a[Seymour Analyzer] §7Exporting §astopped§7! Copying data to clipboard...");
+      try {
+        const StringSelection = Java.type("java.awt.datatransfer.StringSelection");
+        const Toolkit = Java.type("java.awt.Toolkit");
+        const clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+
+        const toExport = (typeof exportCollection !== "undefined" && exportCollection !== null) ? exportCollection : {};
+        // Build a human-friendly export string (one piece per line) then copy both pretty text and raw JSON
+        (function() {
+          try {
+            const pieces = toExport || {};
+            const uuids = Object.keys(pieces);
+            let pretty = "Seymour Export - " + uuids.length + " piece" + (uuids.length === 1 ? "" : "s") + "\n\n";
+            for (let i = 0; i < uuids.length; i++) {
+              const p = pieces[uuids[i]] || {};
+              const name = p.pieceName || "Unknown";
+              const hex = p.hexcode ? ("#" + String(p.hexcode).toUpperCase()) : "#??????";
+              let top = (p.bestMatch && p.bestMatch.colorName) ? p.bestMatch.colorName : ((p.allMatches && p.allMatches[0] && p.allMatches[0].colorName) ? p.allMatches[0].colorName : "N/A");
+              top += (p.bestMatch && typeof p.bestMatch.deltaE === "number") ? (" (ΔE: " + p.bestMatch.deltaE.toFixed(2) + ")") : "";
+              const pattern = p.specialPattern ? String(p.specialPattern) : null;
+
+              pretty += name + " | " + hex + " | Top: " + top;
+              if (pattern) pretty += " | Pattern: " + pattern;
+              pretty += "\n";
+            }
+
+            clipboard.setContents(new StringSelection(pretty), null);
+          } catch (e) {
+            // Fallback to raw JSON if formatting fails
+            ChatLib.chat("§c[Seymour] Failed to create pretty export, copying raw JSON instead: " + e);
+            //clipboard.setContents(new StringSelection(json), null);
+          }
+        })();
+        ChatLib.chat("§a[Seymour Analyzer] §7Exported §e" + Object.keys(toExport).length + "§7 pieces to clipboard!");
+      } catch (e) {
+        ChatLib.chat("§c[Seymour] Failed to copy export to clipboard: " + e);
+      }
+      return;
+    } else {
+      ChatLib.chat("§a[Seymour Analyzer] §cInvalid action! Use 'start' or 'stop'.");
+      return;
+    }
+  }
   
   // Handle scan subcommand
   if (arg1 && arg1.toLowerCase() === "scan") {
@@ -2506,6 +2605,10 @@ register("command", function() {
     }
     
     if (arg2.toLowerCase() === "start") {
+      if (exportingEnabled) {
+        ChatLib.chat("§a[Seymour Analyzer] §cPlease stop exporting before starting scan!");
+        return;
+      }
       scanningEnabled = true;
       ChatLib.chat("§a[Seymour Analyzer] §7Scanning §aenabled§7! Open chests to automatically scan Seymour pieces.");
       return;
@@ -3227,8 +3330,8 @@ if (arg1 && arg1.toLowerCase() === "clear") {
   ChatLib.chat("§e/seymour checklist §7- Open armor checklist");
   ChatLib.chat("§e/seymour bestsets §7- Find best matching 4-piece sets");
   ChatLib.chat("§e/seymour stats §7- Print the amount of T1/T2/Dupes in chat")
-  ChatLib.chat("§a/seymour scan start §7- Start scanning pieces");
-  ChatLib.chat("§a/seymour scan stop §7- Stop scanning pieces");
+  ChatLib.chat("§a/seymour scan <start|stop> §7- Start or stop scanning pieces");
+  ChatLib.chat("§a/seymour export <start|stop> §7- Start or stop exporting pieces to clipboard");
   ChatLib.chat("§c/seymour rebuild §7- Show all rebuild commands");
   ChatLib.chat("§2/seymour search <hexes> §7- Highlight chests with hex codes");
   ChatLib.chat("§2/seymour search clear §7- Clear search highlights");
@@ -3255,7 +3358,7 @@ const armorGui = new ArmorChecklistGUI(collection);
 const bestSetsGui = new BestSetsGUI(collection);
 
 // Commands to open GUIs
-register("command", () => {
+register("command", (arg1) => {
   dbGui.open();
 }).setName("seymourdb").setAliases("sdb");
 
