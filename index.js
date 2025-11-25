@@ -316,6 +316,7 @@ setTimeout(function() {
 
 let scanningEnabled = false;
 let exportingEnabled = false;
+exportCollection = {};
 
 // ===== COLOR MATH =====
 function hexToRgb(hex) {
@@ -1333,6 +1334,7 @@ function scanChestContents() {
       if (!uuid) continue;
       
       if (collection[uuid] && !exportingEnabled) continue;
+      if (exportingEnabled && exportCollection && exportCollection[uuid]) continue;
       
       const loreRaw = item.getLore();
       const itemHex = extractHexFromLore(loreRaw);
@@ -2549,6 +2551,7 @@ register("command", function() {
         return;
       }
       ChatLib.chat("§a[Seymour Analyzer] §7Exporting §astarted§7! Scanned pieces will be collected for export.");
+      exportCollection = {};
       exportingEnabled = true;
       return;
     } else if (arg2.toLowerCase() === "stop") {
@@ -2571,7 +2574,7 @@ register("command", function() {
               const name = p.pieceName || "Unknown";
               const hex = p.hexcode ? ("#" + String(p.hexcode).toUpperCase()) : "#??????";
               let top = (p.bestMatch && p.bestMatch.colorName) ? p.bestMatch.colorName : ((p.allMatches && p.allMatches[0] && p.allMatches[0].colorName) ? p.allMatches[0].colorName : "N/A");
-              top += (p.bestMatch && typeof p.bestMatch.deltaE === "number") ? (" (ΔE: " + p.bestMatch.deltaE.toFixed(2) + ")") : "";
+              top += (p.bestMatch && typeof p.bestMatch.deltaE === "number") ? (" (ΔE: " + p.bestMatch.deltaE.toFixed(2) + " | Abs:  " + p.bestMatch.absoluteDistance + ")") : "";
               const pattern = p.specialPattern ? String(p.specialPattern) : null;
 
               pretty += name + " | " + hex + " | Top: " + top;
@@ -2583,7 +2586,7 @@ register("command", function() {
           } catch (e) {
             // Fallback to raw JSON if formatting fails
             ChatLib.chat("§c[Seymour] Failed to create pretty export, copying raw JSON instead: " + e);
-            //clipboard.setContents(new StringSelection(json), null);
+            clipboard.setContents(new StringSelection(json), null);
           }
         })();
         ChatLib.chat("§a[Seymour Analyzer] §7Exported §e" + Object.keys(toExport).length + "§7 pieces to clipboard!");
