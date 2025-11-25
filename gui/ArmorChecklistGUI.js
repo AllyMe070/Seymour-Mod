@@ -700,8 +700,11 @@ export class ArmorChecklistGUI {
         this.gui.registerScrolled((x, y, direction) => {
             const currentCategory = self.pageOrder[self.currentPage];
             const stages = self.categories[currentCategory];
-            const maxScroll = Math.max(0, stages.length - 12);
-            
+            const screenHeight = Renderer.screen.getHeight();
+            const availableHeight = screenHeight - 140;
+            const maxVisible = Math.max(12, Math.floor(availableHeight / 30));
+            const maxScroll = Math.max(0, stages.length - maxVisible);
+
             if (direction === 1) {
                 self.scrollOffset = Math.max(0, self.scrollOffset - 1);
             } else {
