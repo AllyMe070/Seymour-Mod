@@ -1277,71 +1277,113 @@ export class ArmorChecklistGUI {
         Renderer.drawStringWithShadow("§l§7Leggings", 500, startY - 15);
         Renderer.drawStringWithShadow("§l§7Boots", 630, startY - 15);
         
-        // Calculate how many we can show - always show 12
-        const maxVisible = 12;
+        // Calculate how many we can show based on screen height
+        const screenHeight = Renderer.screen.getHeight();
+        const availableHeight = screenHeight - 140; // Total padding: 70 top + 70 bottom
+        const maxVisible = Math.max(12, Math.floor(availableHeight / 30)); // At least 12, more if space allows
         const visibleStages = Math.min(stages.length - this.scrollOffset, maxVisible);
-        
-        // Draw each target color - UNROLLED for 12 items
-        if (visibleStages > 0) {
-            const stage = stages[this.scrollOffset + 0];
-            const y = startY + (0 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 1) {
-            const stage = stages[this.scrollOffset + 1];
-            const y = startY + (1 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 2) {
-            const stage = stages[this.scrollOffset + 2];
-            const y = startY + (2 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 3) {
-            const stage = stages[this.scrollOffset + 3];
-            const y = startY + (3 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 4) {
-            const stage = stages[this.scrollOffset + 4];
-            const y = startY + (4 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 5) {
-            const stage = stages[this.scrollOffset + 5];
-            const y = startY + (5 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 6) {
-            const stage = stages[this.scrollOffset + 6];
-            const y = startY + (6 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 7) {
-            const stage = stages[this.scrollOffset + 7];
-            const y = startY + (7 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 8) {
-            const stage = stages[this.scrollOffset + 8];
-            const y = startY + (8 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 9) {
-            const stage = stages[this.scrollOffset + 9];
-            const y = startY + (9 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 10) {
-            const stage = stages[this.scrollOffset + 10];
-            const y = startY + (10 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
-        if (visibleStages > 11) {
-            const stage = stages[this.scrollOffset + 11];
-            const y = startY + (11 * rowHeight);
-            this.drawChecklistRowCached(stage, y);
-        }
+
+// Draw each visible stage - hardcoded to avoid scoping issues, extended for larger screens
+if (visibleStages > 0) {
+    const stage0 = stages[this.scrollOffset + 0];
+    const y0 = startY + (0 * 30);
+    this.drawChecklistRowCached(stage0, y0);
+}
+if (visibleStages > 1) {
+    const stage1 = stages[this.scrollOffset + 1];
+    const y1 = startY + (1 * 30);
+    this.drawChecklistRowCached(stage1, y1);
+}
+if (visibleStages > 2) {
+    const stage2 = stages[this.scrollOffset + 2];
+    const y2 = startY + (2 * 30);
+    this.drawChecklistRowCached(stage2, y2);
+}
+if (visibleStages > 3) {
+    const stage3 = stages[this.scrollOffset + 3];
+    const y3 = startY + (3 * 30);
+    this.drawChecklistRowCached(stage3, y3);
+}
+if (visibleStages > 4) {
+    const stage4 = stages[this.scrollOffset + 4];
+    const y4 = startY + (4 * 30);
+    this.drawChecklistRowCached(stage4, y4);
+}
+if (visibleStages > 5) {
+    const stage5 = stages[this.scrollOffset + 5];
+    const y5 = startY + (5 * 30);
+    this.drawChecklistRowCached(stage5, y5);
+}
+if (visibleStages > 6) {
+    const stage6 = stages[this.scrollOffset + 6];
+    const y6 = startY + (6 * 30);
+    this.drawChecklistRowCached(stage6, y6);
+}
+if (visibleStages > 7) {
+    const stage7 = stages[this.scrollOffset + 7];
+    const y7 = startY + (7 * 30);
+    this.drawChecklistRowCached(stage7, y7);
+}
+if (visibleStages > 8) {
+    const stage8 = stages[this.scrollOffset + 8];
+    const y8 = startY + (8 * 30);
+    this.drawChecklistRowCached(stage8, y8);
+}
+if (visibleStages > 9) {
+    const stage9 = stages[this.scrollOffset + 9];
+    const y9 = startY + (9 * 30);
+    this.drawChecklistRowCached(stage9, y9);
+}
+if (visibleStages > 10) {
+    const stage10 = stages[this.scrollOffset + 10];
+    const y10 = startY + (10 * 30);
+    this.drawChecklistRowCached(stage10, y10);
+}
+if (visibleStages > 11) {
+    const stage11 = stages[this.scrollOffset + 11];
+    const y11 = startY + (11 * 30);
+    this.drawChecklistRowCached(stage11, y11);
+}
+if (visibleStages > 12) {
+    const stage12 = stages[this.scrollOffset + 12];
+    const y12 = startY + (12 * 30);
+    this.drawChecklistRowCached(stage12, y12);
+}
+if (visibleStages > 13) {
+    const stage13 = stages[this.scrollOffset + 13];
+    const y13 = startY + (13 * 30);
+    this.drawChecklistRowCached(stage13, y13);
+}
+if (visibleStages > 14) {
+    const stage14 = stages[this.scrollOffset + 14];
+    const y14 = startY + (14 * 30);
+    this.drawChecklistRowCached(stage14, y14);
+}
+if (visibleStages > 15) {
+    const stage15 = stages[this.scrollOffset + 15];
+    const y15 = startY + (15 * 30);
+    this.drawChecklistRowCached(stage15, y15);
+}
+if (visibleStages > 16) {
+    const stage16 = stages[this.scrollOffset + 16];
+    const y16 = startY + (16 * 30);
+    this.drawChecklistRowCached(stage16, y16);
+}
+if (visibleStages > 17) {
+    const stage17 = stages[this.scrollOffset + 17];
+    const y17 = startY + (17 * 30);
+    this.drawChecklistRowCached(stage17, y17);
+}
+if (visibleStages > 18) {
+    const stage18 = stages[this.scrollOffset + 18];
+    const y18 = startY + (18 * 30);
+    this.drawChecklistRowCached(stage18, y18);
+}
+if (visibleStages > 19) {
+    const stage19 = stages[this.scrollOffset + 19];
+    const y19 = startY + (19 * 30);
+    this.drawChecklistRowCached(stage19, y19);
+}
         
         // Scroll indicator
         if (stages.length > maxVisible) {
