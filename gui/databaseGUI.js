@@ -30,6 +30,7 @@ export class DatabaseGUI {
         this.lastSortDirection = "asc";
         this.cachedSortedPieces = null;
         this.showDupesOnly = false;
+        this.showFades = true;
         this.lastShowDupesOnly = false;
         this.cachedTierCounts = null;
     }
@@ -384,7 +385,20 @@ export class DatabaseGUI {
             return;
         }
     }
-    
+
+    // Check fades button (left click)
+    if (button === 0) {
+        const fadesButtonWidth = 120;
+        const fadesButtonX = 160;
+        const fadesButtonY = height - 35;
+
+        if (actualMouseX >= fadesButtonX && actualMouseX <= fadesButtonX + fadesButtonWidth &&
+            actualMouseY >= fadesButtonY && actualMouseY <= fadesButtonY + 20) {
+            self.toggleFadesFilter();
+            return;
+        }
+    }
+
 // Check checklist button click FIRST
     if (button === 0) {
         const clButtonWidth = 150;
@@ -684,6 +698,10 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
             filtered = dupesArray;
         }
         
+        if (!this.showFades) {
+            filtered = filtered.filter(piece => !piece.isFadeDye);
+        }
+
         // First apply text search filter
         if (this.searchText && this.searchText.length > 0) {
             const searchLower = this.searchText.toLowerCase();
@@ -968,6 +986,7 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         this.drawWordButton(width, height);
         this.drawPatternButton(width, height);
         this.drawDupesButton(width, height);
+        this.drawFadesButton(width, height);
         this.drawHexSearchBox();
 
         // Get filtered and sorted pieces
@@ -1843,6 +1862,19 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         }
     }
 
+    toggleFadesFilter() {
+        this.showFades = !this.showFades;
+        this.scrollOffset = 0;
+        this.cachedFilteredPieces = null;
+        this.cachedSortedPieces = null;
+
+        if (this.showFades) {
+            ChatLib.chat("§a[Seymour GUI] §7Showing §efade dyes");
+        } else {
+            ChatLib.chat("§a[Seymour GUI] §7Hiding §efade dyes");
+        }
+    }
+
     drawDupesButton(screenWidth, screenHeight) {
         const buttonWidth = 120;
         const buttonHeight = 20;
@@ -1876,6 +1908,39 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         Renderer.drawRect(borderColor, buttonX + buttonWidth - 2, buttonY, 2, buttonHeight);
         
         const text = this.showDupesOnly ? "§f§lDupes: ON" : "§f§lShow Dupes";
+        const textWidth = Renderer.getStringWidth(text);
+        const textX = buttonX + (buttonWidth - textWidth) / 2;
+        
+        Renderer.drawStringWithShadow(text, textX, buttonY + 6);
+    }
+
+    drawFadesButton(screenWidth, screenHeight) {
+        const buttonWidth = 120;
+        const buttonHeight = 20;
+        const buttonX = 160;
+        const buttonY = screenHeight - 35;
+        const Mouse = Java.type("org.lwjgl.input.Mouse");
+        const mc = Client.getMinecraft();
+        const scale = 2;
+        const mouseX = Mouse.getX() / scale;
+        const mouseY = (mc.field_71440_d - Mouse.getY()) / scale;
+        const isHovered = mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+                            mouseY >= buttonY && mouseY <= buttonY + buttonHeight;
+        const bgColor = this.showFades ? 
+            Renderer.color(60, 179, 113, 200) : 
+            Renderer.color(169, 169, 169, 200);
+        const hoverColor = this.showFades ?
+            Renderer.color(80, 199, 133, 220) :
+            Renderer.color(189, 189, 189, 220);
+        Renderer.drawRect(isHovered ? hoverColor : bgColor, buttonX, buttonY, buttonWidth, buttonHeight);
+        const borderColor = this.showFades ?
+            Renderer.color(144, 238, 144, 255) :
+            Renderer.color(211, 211, 211, 255);
+        Renderer.drawRect(borderColor, buttonX, buttonY, buttonWidth, 2);
+        Renderer.drawRect(borderColor, buttonX, buttonY + buttonHeight - 2, buttonWidth, 2);
+        Renderer.drawRect(borderColor, buttonX, buttonY, 2, buttonHeight);
+        Renderer.drawRect(borderColor, buttonX + buttonWidth - 2, buttonY, 2, buttonHeight);
+        const text = this.showFades ? "§f§lFades: ON" : "§f§lShow Fades";
         const textWidth = Renderer.getStringWidth(text);
         const textX = buttonX + (buttonWidth - textWidth) / 2;
         
