@@ -2465,7 +2465,6 @@ register("command", function() {
     let searchText = null;
   if (arg1 && (arg1.toLowerCase() === "database" || arg1.toLowerCase() === "db")) {
     if (arg2) {
-      ChatLib.chat("arg2 is: " + arg2);
       if (!arg2.toLowerCase().includes("x")) {
         hexSearchText = arg2.toLowerCase();
       } else {
