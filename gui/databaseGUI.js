@@ -755,6 +755,7 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
                         piece.tier = match.tier;
                         piece.matchLower = match.colorName.toLowerCase();
                         piece.deltaString = match.deltaE.toFixed(2);
+                        piece.isShowingAlternateMatch = true;
                         filteredFades.push(piece);
                         found = true;
                         break;
@@ -772,6 +773,27 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         fadeIdx = fadeIdx + 1;
     }
     filtered = filteredFades;
+} else {
+    // Restore original best matches when showing fades again
+    const self = this;
+    let restoreIdx = 0;
+    while (restoreIdx < filtered.length) {
+        const piece = filtered[restoreIdx];
+        if (piece.isShowingAlternateMatch) {
+            const originalPiece = self.collection[piece.uuid];
+            if (originalPiece && originalPiece.bestMatch) {
+                piece.closestMatch = originalPiece.bestMatch.colorName;
+                piece.closestHex = originalPiece.bestMatch.targetHex;
+                piece.deltaE = originalPiece.bestMatch.deltaE;
+                piece.absoluteDistance = originalPiece.bestMatch.absoluteDistance;
+                piece.tier = originalPiece.bestMatch.tier;
+                piece.matchLower = originalPiece.bestMatch.colorName.toLowerCase();
+                piece.deltaString = originalPiece.bestMatch.deltaE.toFixed(2);
+                piece.isShowingAlternateMatch = false;
+            }
+        }
+        restoreIdx = restoreIdx + 1;
+    }
 }
 
         // First apply text search filter
@@ -1409,11 +1431,11 @@ if (shouldHighlight && tc && shouldDrawMainHighlight) {
                 deColor = "§7";
             }
         } else if (piece.deltaE < 1) {
-            deColor = piece.isFadeDye ? "§9" : "§c";
+            deColor = matchIsFade ? "§9" : "§c";  // Changed from piece.isFadeDye to matchIsFade
         } else if (piece.deltaE < 2) {
-            deColor = piece.isFadeDye ? "§b" : "§d";
+            deColor = matchIsFade ? "§b" : "§d";  // Changed from piece.isFadeDye to matchIsFade
         } else if (piece.deltaE < 5) {
-            deColor = piece.isFadeDye ? "§e" : "§6";
+            deColor = matchIsFade ? "§e" : "§6";  // Changed from piece.isFadeDye to matchIsFade
         } else {
             deColor = "§7";
         }
@@ -1602,13 +1624,11 @@ if (shouldHighlight && tc && shouldDrawMainHighlight) {
                     // Run search command for this hex
                     ChatLib.command("seymour search " + piece.hex, true);
                     ChatLib.chat("§a[Seymour GUI] §7Searching for piece: §f" + piece.name);
-                } else if (option.action === "remove") {
-                    
+                } else if (option.action === "remove") {  
                     // Remove from collection
                     delete this.collection[piece.uuid];
                     this.collection.save();
                     
-                    ChatLib.chat("§e[REMOVE DEBUG] Deleted and saved. Still exists: " + (this.collection[piece.uuid] !== undefined));
                     
                     // Rebuild the allPieces array without this piece
                     const newAllPieces = [];
@@ -1664,9 +1684,6 @@ if (shouldHighlight && tc && shouldDrawMainHighlight) {
                     ChatLib.command("seymour search " + piece.hex, true);
                     ChatLib.chat("§a[Seymour GUI] §7Searching for piece: §f" + piece.name);
                 } else if (option.action === "remove") {
-                    ChatLib.chat("§e[REMOVE DEBUG] Attempting to remove UUID: " + piece.uuid);
-                    ChatLib.chat("§e[REMOVE DEBUG] Piece exists in collection: " + (this.collection[piece.uuid] !== undefined));
-                    
                     // Remove from collection
                     delete this.collection[piece.uuid];
                     this.collection.save();
