@@ -73,7 +73,6 @@ export class DatabaseGUI {
                 const storedDeltaE = piece.bestMatch ? (piece.bestMatch.deltaE + 0) : 999;
                 const storedAbsDist = piece.bestMatch ? (piece.bestMatch.absoluteDistance + 0) : 999;
                 const storedTier = piece.bestMatch ? (piece.bestMatch.tier + 0) : 4;
-                const storedIsFade = this.checkFadeDye(storedMatchName);
                 const storedIsCustom = this.checkCustomColor(storedMatchName);
                 
                 // Create object using stored variables
@@ -86,7 +85,6 @@ export class DatabaseGUI {
                 newPiece.deltaE = storedDeltaE;
                 newPiece.absoluteDistance = storedAbsDist;
                 newPiece.tier = storedTier;
-                newPiece.isFadeDye = storedIsFade;
                 newPiece.isCustomColor = storedIsCustom;
                 newPiece.nameLower = storedName.toLowerCase();
                 newPiece.matchLower = storedMatchName.toLowerCase();
@@ -195,15 +193,50 @@ export class DatabaseGUI {
                     const startIndex = self.scrollOffset;
                     const totalPieces = displayPieces.length;
                     
-                    // Calculate which ROW INDEX the mouse is in (ignoring expansion completely)
-                    const relativeY = mouseY - startY;
-                    const rowIndex = Math.floor(relativeY / rowHeight);
+                    // Helper to calculate actual row height
+                    const getRowHeight = function(piece) {
+                        if (self.expandedPieceUuid !== piece.uuid) return rowHeight;
+                        
+                        const originalPiece = self.collection[piece.uuid];
+                        if (!originalPiece || !originalPiece.allMatches) return rowHeight;
+                        
+                        const numMatches = Math.min(3, originalPiece.allMatches.length);
+                        let visibleLines = 0;
+                        
+                        if (numMatches > 0 && (self.showFades || !self.checkFadeDye(originalPiece.allMatches[0].colorName))) {
+                            visibleLines = visibleLines + 1;
+                        }
+                        if (numMatches > 1 && (self.showFades || !self.checkFadeDye(originalPiece.allMatches[1].colorName))) {
+                            visibleLines = visibleLines + 1;
+                        }
+                        if (numMatches > 2 && (self.showFades || !self.checkFadeDye(originalPiece.allMatches[2].colorName))) {
+                            visibleLines = visibleLines + 1;
+                        }
+                        
+                        const calculatedHeight = 20 + (visibleLines * 20);
+                        return calculatedHeight;
+                       };
                     
-                    // Get the piece at that index
-                    const actualIndex = startIndex + rowIndex;
+                    // Walk through rows accounting for actual heights
+                    let currentY = startY;
+                    let foundIndex = -1;
                     
-                    if (actualIndex >= 0 && actualIndex < totalPieces) {
-                        const piece = displayPieces[actualIndex];
+                    let checkIndex = 0;
+                    while (checkIndex < 30 && (startIndex + checkIndex) < totalPieces) {
+                        const piece = displayPieces[startIndex + checkIndex];
+                        const thisRowHeight = getRowHeight(piece);
+                        
+                        if (mouseY >= currentY && mouseY < currentY + thisRowHeight) {
+                            foundIndex = startIndex + checkIndex;
+                            break;
+                        }
+                        
+                        currentY = currentY + thisRowHeight;
+                        checkIndex = checkIndex + 1;
+                    }
+                    
+                    if (foundIndex >= 0 && foundIndex < totalPieces) {
+                        const piece = displayPieces[foundIndex];
                         self.expandedPieceUuid = piece.uuid;
                     } else {
                         self.expandedPieceUuid = null;
@@ -375,9 +408,9 @@ export class DatabaseGUI {
     
     // Check dupes button (left click)
     if (button === 0) {
-        const dupesButtonWidth = 120;
-        const dupesButtonX = 20;
-        const dupesButtonY = height - 35;
+    const dupesButtonWidth = 85;
+    const dupesButtonX = 20;
+    const dupesButtonY = height - 35;
         
         if (actualMouseX >= dupesButtonX && actualMouseX <= dupesButtonX + dupesButtonWidth &&
             actualMouseY >= dupesButtonY && actualMouseY <= dupesButtonY + 20) {
@@ -388,9 +421,9 @@ export class DatabaseGUI {
 
     // Check fades button (left click)
     if (button === 0) {
-        const fadesButtonWidth = 120;
-        const fadesButtonX = 160;
-        const fadesButtonY = height - 35;
+    const fadesButtonWidth = 85;
+    const fadesButtonX = 110;
+    const fadesButtonY = height - 35;
 
         if (actualMouseX >= fadesButtonX && actualMouseX <= fadesButtonX + fadesButtonWidth &&
             actualMouseY >= fadesButtonY && actualMouseY <= fadesButtonY + 20) {
@@ -699,8 +732,47 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         }
         
         if (!this.showFades) {
-            filtered = filtered.filter(piece => !piece.isFadeDye);
+    const self = this;
+    const filteredFades = [];
+    
+    let fadeIdx = 0;
+    while (fadeIdx < filtered.length) {
+        const piece = filtered[fadeIdx];
+        const matchIsFade = self.checkFadeDye(piece.closestMatch);
+        
+        if (matchIsFade) {
+            const originalPiece = self.collection[piece.uuid];
+            if (originalPiece && originalPiece.allMatches) {
+                let found = false;
+                let matchIdx = 0;
+                while (matchIdx < originalPiece.allMatches.length && matchIdx < 3) {
+                    const match = originalPiece.allMatches[matchIdx];
+                    if (!self.checkFadeDye(match.colorName)) {
+                        piece.closestMatch = match.colorName;
+                        piece.closestHex = match.targetHex;
+                        piece.deltaE = match.deltaE;
+                        piece.absoluteDistance = match.absoluteDistance;
+                        piece.tier = match.tier;
+                        piece.matchLower = match.colorName.toLowerCase();
+                        piece.deltaString = match.deltaE.toFixed(2);
+                        filteredFades.push(piece);
+                        found = true;
+                        break;
+                    }
+                    matchIdx = matchIdx + 1;
+                }
+                if (!found) {
+                    // No non-fade alternative, skip this piece
+                }
+            }
+        } else {
+            filteredFades.push(piece);
         }
+        
+        fadeIdx = fadeIdx + 1;
+    }
+    filtered = filteredFades;
+}
 
         // First apply text search filter
         if (this.searchText && this.searchText.length > 0) {
@@ -1059,136 +1131,160 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         
         let currentY = startY;
         
+        // Helper function to get actual row height
+        const getActualRowHeight = (piece) => {
+            if (this.expandedPieceUuid !== piece.uuid) return rowHeight;
+            
+            const originalPiece = this.collection[piece.uuid];
+            if (!originalPiece || !originalPiece.allMatches) return rowHeight;
+            
+            const numMatches = Math.min(3, originalPiece.allMatches.length);
+            let visibleLines = 0;
+            
+            if (numMatches > 0 && (this.showFades || !this.checkFadeDye(originalPiece.allMatches[0].colorName))) {
+                visibleLines = visibleLines + 1;
+            }
+            if (numMatches > 1 && (this.showFades || !this.checkFadeDye(originalPiece.allMatches[1].colorName))) {
+                visibleLines = visibleLines + 1;
+            }
+            if (numMatches > 2 && (this.showFades || !this.checkFadeDye(originalPiece.allMatches[2].colorName))) {
+                visibleLines = visibleLines + 1;
+            }
+            
+            const calculatedHeight = 20 + (visibleLines * 20);
+            return calculatedHeight;
+        };
+        
         // Batch 1 (0-4)
         if (numToRender > 0) {
             this.drawRow(displayPieces[startIndex + 0], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 0].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 0]);
         }
         if (numToRender > 1) {
             this.drawRow(displayPieces[startIndex + 1], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 1].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 1]);
         }
         if (numToRender > 2) {
             this.drawRow(displayPieces[startIndex + 2], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 2].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 2]);
         }
         if (numToRender > 3) {
             this.drawRow(displayPieces[startIndex + 3], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 3].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 3]);
         }
         if (numToRender > 4) {
             this.drawRow(displayPieces[startIndex + 4], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 4].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 4]);
         }
         
         // Batch 2 (5-9)
         if (numToRender > 5) {
             this.drawRow(displayPieces[startIndex + 5], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 5].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 5]);
         }
         if (numToRender > 6) {
             this.drawRow(displayPieces[startIndex + 6], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 6].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 6]);
         }
         if (numToRender > 7) {
             this.drawRow(displayPieces[startIndex + 7], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 7].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 7]);
         }
         if (numToRender > 8) {
             this.drawRow(displayPieces[startIndex + 8], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 8].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 8]);
         }
         if (numToRender > 9) {
             this.drawRow(displayPieces[startIndex + 9], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 9].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 9]);
         }
         
         // Batch 3 (10-14)
         if (numToRender > 10) {
             this.drawRow(displayPieces[startIndex + 10], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 10].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 10]);
         }
         if (numToRender > 11) {
             this.drawRow(displayPieces[startIndex + 11], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 11].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 11]);
         }
         if (numToRender > 12) {
             this.drawRow(displayPieces[startIndex + 12], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 12].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 12]);
         }
         if (numToRender > 13) {
             this.drawRow(displayPieces[startIndex + 13], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 13].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 13]);
         }
         if (numToRender > 14) {
             this.drawRow(displayPieces[startIndex + 14], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 14].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 14]);
         }
         
         // Batch 4 (15-19)
         if (numToRender > 15) {
             this.drawRow(displayPieces[startIndex + 15], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 15].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 15]);
         }
         if (numToRender > 16) {
             this.drawRow(displayPieces[startIndex + 16], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 16].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 16]);
         }
         if (numToRender > 17) {
             this.drawRow(displayPieces[startIndex + 17], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 17].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 17]);
         }
         if (numToRender > 18) {
             this.drawRow(displayPieces[startIndex + 18], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 18].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 18]);
         }
         if (numToRender > 19) {
             this.drawRow(displayPieces[startIndex + 19], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 19].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 19]);
         }
         
         // Batch 5 (20-24)
         if (numToRender > 20) {
             this.drawRow(displayPieces[startIndex + 20], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 20].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 20]);
         }
         if (numToRender > 21) {
             this.drawRow(displayPieces[startIndex + 21], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 21].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 21]);
         }
         if (numToRender > 22) {
             this.drawRow(displayPieces[startIndex + 22], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 22].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 22]);
         }
         if (numToRender > 23) {
             this.drawRow(displayPieces[startIndex + 23], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 23].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 23]);
         }
         if (numToRender > 24) {
             this.drawRow(displayPieces[startIndex + 24], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 24].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 24]);
         }
         
         // Batch 6 (25-29)
         if (numToRender > 25) {
             this.drawRow(displayPieces[startIndex + 25], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 25].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 25]);
         }
         if (numToRender > 26) {
             this.drawRow(displayPieces[startIndex + 26], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 26].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 26]);
         }
         if (numToRender > 27) {
             this.drawRow(displayPieces[startIndex + 27], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 27].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 27]);
         }
         if (numToRender > 28) {
             this.drawRow(displayPieces[startIndex + 28], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 28].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 28]);
         }
         if (numToRender > 29) {
             this.drawRow(displayPieces[startIndex + 29], currentY, width, rowHeight);
-            currentY = currentY + (this.expandedPieceUuid === displayPieces[startIndex + 29].uuid ? 80 : rowHeight);
+            currentY = currentY + getActualRowHeight(displayPieces[startIndex + 29]);
         }
 
         // Draw context menu
@@ -1201,53 +1297,79 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
     }
 
     drawRow(piece, y, screenWidth, rowHeight) {
-        const isExpanded = this.expandedPieceUuid === piece.uuid;
-        const actualRowHeight = isExpanded ? 80 : rowHeight;
+    const isExpanded = this.expandedPieceUuid === piece.uuid;
+    
+    // Calculate height based on how many lines will actually be shown
+    let actualRowHeight = 20;
+    if (isExpanded) {
+        const originalPiece = this.collection[piece.uuid];
+        if (originalPiece && originalPiece.allMatches) {
+            const numMatches = Math.min(3, originalPiece.allMatches.length);
+            let visibleLines = 0;
+            
+            if (numMatches > 0 && (this.showFades || !this.checkFadeDye(originalPiece.allMatches[0].colorName))) {
+                visibleLines = visibleLines + 1;
+            }
+            if (numMatches > 1 && (this.showFades || !this.checkFadeDye(originalPiece.allMatches[1].colorName))) {
+                visibleLines = visibleLines + 1;
+            }
+            if (numMatches > 2 && (this.showFades || !this.checkFadeDye(originalPiece.allMatches[2].colorName))) {
+                visibleLines = visibleLines + 1;
+            }
+            
+            actualRowHeight = 20 + (visibleLines * 20);
+        }
+    }
         
         // Background with tier color - ONLY on ΔE and Absolute columns based on deltaE
-        const matchIsFade = this.checkFadeDye(piece.closestMatch);
-        const matchIsCustom = piece.isCustomColor || false;
-        let shouldHighlight = false;
-        let tc = null;
+// Always show main highlight for the main piece row
+const shouldDrawMainHighlight = true;
 
-        // Custom colors have HIGHEST priority
-        if (matchIsCustom) {
-            if (piece.deltaE <= 2) {
-                shouldHighlight = true;
-                tc = { r: 0, g: 100, b: 0 };  // Dark green for T1/T1
-            } else if (piece.deltaE <= 5) {
-                shouldHighlight = true;
-                tc = { r: 85, g: 107, b: 47 };  // Olive green for T2
-            }
-        } else if (!matchIsFade) {
-            // Normal dyes - priority order
-            if (piece.deltaE <= 1) {
-                shouldHighlight = true;
-                tc = { r: 255, g: 0, b: 0 };  // Red
-            } else if (piece.deltaE <= 2) {
-                shouldHighlight = true;
-                tc = { r: 255, g: 105, b: 180 };  // Pink
-            } else if (piece.deltaE <= 5) {
-                shouldHighlight = true;
-                tc = { r: 255, g: 165, b: 0 };  // Orange
-            }
-        } else {
-            // Fade dyes - priority order
-            if (piece.deltaE <= 1) {
-                shouldHighlight = true;
-                tc = { r: 0, g: 0, b: 255 };  // Dark blue
-            } else if (piece.deltaE <= 2) {
-                shouldHighlight = true;
-                tc = { r: 135, g: 206, b: 250 };  // Light blue
-            } else if (piece.deltaE <= 5) {
-                shouldHighlight = true;
-                tc = { r: 255, g: 255, b: 0 };  // Yellow
-            }
-        }
+const matchIsFade = this.checkFadeDye(piece.closestMatch);
+const matchIsCustom = piece.isCustomColor || false;
+let shouldHighlight = false;
+let tc = null;
 
-        if (shouldHighlight && tc) {
-            Renderer.drawRect(Renderer.color(tc.r, tc.g, tc.b, 72), 540, y, 140, actualRowHeight);
-        }
+// Custom colors have HIGHEST priority
+if (matchIsCustom) {
+    if (piece.deltaE <= 2) {
+        shouldHighlight = true;
+        tc = { r: 0, g: 100, b: 0 };  // Dark green for T1/T1
+    } else if (piece.deltaE <= 5) {
+        shouldHighlight = true;
+        tc = { r: 85, g: 107, b: 47 };  // Olive green for T2
+    }
+} else if (!matchIsFade) {
+    // Normal dyes - priority order
+    if (piece.deltaE <= 1) {
+        shouldHighlight = true;
+        tc = { r: 255, g: 0, b: 0 };  // Red
+    } else if (piece.deltaE <= 2) {
+        shouldHighlight = true;
+        tc = { r: 255, g: 105, b: 180 };  // Pink
+    } else if (piece.deltaE <= 5) {
+        shouldHighlight = true;
+        tc = { r: 255, g: 165, b: 0 };  // Orange
+    }
+} else {
+    // Fade dyes - priority order
+    if (piece.deltaE <= 1) {
+        shouldHighlight = true;
+        tc = { r: 0, g: 0, b: 255 };  // Dark blue
+    } else if (piece.deltaE <= 2) {
+        shouldHighlight = true;
+        tc = { r: 135, g: 206, b: 250 };  // Light blue
+    } else if (piece.deltaE <= 5) {
+        shouldHighlight = true;
+        tc = { r: 255, g: 255, b: 0 };  // Yellow
+    }
+}
+
+if (shouldHighlight && tc && shouldDrawMainHighlight) {
+    // Only highlight the main row (20px), not the expanded section
+    const highlightHeight = isExpanded ? 20 : actualRowHeight;
+    Renderer.drawRect(Renderer.color(tc.r, tc.g, tc.b, 72), 540, y, 140, highlightHeight);
+}
             
         // Name
         let displayName = piece.name;
@@ -1326,10 +1448,9 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
             Renderer.drawStringWithShadow(distanceText, 720, y + 4);
         }
             
-        // Draw expanded info if this piece is expanded
         if (isExpanded) {
-            this.drawExpandedMatches(piece, y + 24);
-        }
+    this.drawExpandedMatches(piece, y + 24);
+}
     }
     
     handleRightClick(mouseX, mouseY) {
@@ -1691,56 +1812,109 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
     }
 
     drawExpandedMatches(piece, startY) {
-        // You'll need to get the original piece data from collection to access all matches
-        const originalPiece = this.collection[piece.uuid];
-        if (!originalPiece || !originalPiece.allMatches) {
-            Renderer.drawStringWithShadow("§7No match data available", 30, startY + 2);
-            return;
-        }
+    const originalPiece = this.collection[piece.uuid];
+    if (!originalPiece || !originalPiece.allMatches) {
+        Renderer.drawStringWithShadow("§7No match data available", 30, startY + 2);
+        return;
+    }
+    
+    const matches = originalPiece.allMatches;
+    const numMatches = Math.min(3, matches.length);
+    
+    let currentY = startY;
+    let displayNum = 1;
+    
+    if (numMatches > 0) {
+        const match = matches[0];
+        const isFade1 = this.checkFadeDye(match.colorName);
         
-        const matches = originalPiece.allMatches;
-        const numMatches = Math.min(3, matches.length);
-        
-        // Draw all 3 matches explicitly (unrolled loop)
-        if (numMatches > 0) {
-            const match = matches[0];
+        if (this.showFades || !isFade1) {
             const matchRgb = this.hexToRgb(match.targetHex);
-            Renderer.drawRect(Renderer.color(matchRgb.r, matchRgb.g, matchRgb.b), 30, startY, 60, 14);
+            
+            let tc1 = null;
+            if (!isFade1 && match.deltaE <= 1) tc1 = { r: 255, g: 0, b: 0 };
+            else if (!isFade1 && match.deltaE <= 2) tc1 = { r: 255, g: 105, b: 180 };
+            else if (!isFade1 && match.deltaE <= 5) tc1 = { r: 255, g: 165, b: 0 };
+            else if (isFade1 && match.deltaE <= 1) tc1 = { r: 0, g: 0, b: 255 };
+            else if (isFade1 && match.deltaE <= 2) tc1 = { r: 135, g: 206, b: 250 };
+            else if (isFade1 && match.deltaE <= 5) tc1 = { r: 255, g: 255, b: 0 };
+            
+            if (tc1) {
+                Renderer.drawRect(Renderer.color(tc1.r, tc1.g, tc1.b, 72), 540, currentY, 140, 16);
+            }
+            
+            Renderer.drawRect(Renderer.color(matchRgb.r, matchRgb.g, matchRgb.b), 30, currentY, 60, 14);
             let matchName = match.colorName;
             if (matchName.length > 30) matchName = matchName.substring(0, 30) + "...";
-            Renderer.drawStringWithShadow("§71. §b" + matchName, 95, startY + 3);
-            const isFade1 = this.checkFadeDye(match.colorName);
+            Renderer.drawStringWithShadow("§7" + displayNum + ". §b" + matchName, 95, currentY + 3);
             const deColor1 = match.deltaE < 1 ? (isFade1 ? "§9" : "§c") : (match.deltaE < 2 ? (isFade1 ? "§b" : "§d") : (match.deltaE < 5 ? (isFade1 ? "§e" : "§6") : "§7"));
-            Renderer.drawStringWithShadow(deColor1 + match.deltaE.toFixed(2), 550, startY + 3);
-            Renderer.drawStringWithShadow("§7" + match.absoluteDistance, 630, startY + 3);
+            Renderer.drawStringWithShadow(deColor1 + match.deltaE.toFixed(2), 550, currentY + 3);
+            Renderer.drawStringWithShadow("§7" + match.absoluteDistance, 630, currentY + 3);
+            currentY = currentY + 20;
+            displayNum = displayNum + 1;
         }
+    }
+    
+    if (numMatches > 1) {
+        const match = matches[1];
+        const isFade2 = this.checkFadeDye(match.colorName);
         
-        if (numMatches > 1) {
-            const match = matches[1];
+        if (this.showFades || !isFade2) {
             const matchRgb = this.hexToRgb(match.targetHex);
-            Renderer.drawRect(Renderer.color(matchRgb.r, matchRgb.g, matchRgb.b), 30, startY + 20, 60, 14);
+            
+            let tc2 = null;
+            if (!isFade2 && match.deltaE <= 1) tc2 = { r: 255, g: 0, b: 0 };
+            else if (!isFade2 && match.deltaE <= 2) tc2 = { r: 255, g: 105, b: 180 };
+            else if (!isFade2 && match.deltaE <= 5) tc2 = { r: 255, g: 165, b: 0 };
+            else if (isFade2 && match.deltaE <= 1) tc2 = { r: 0, g: 0, b: 255 };
+            else if (isFade2 && match.deltaE <= 2) tc2 = { r: 135, g: 206, b: 250 };
+            else if (isFade2 && match.deltaE <= 5) tc2 = { r: 255, g: 255, b: 0 };
+            
+            if (tc2) {
+                Renderer.drawRect(Renderer.color(tc2.r, tc2.g, tc2.b, 72), 540, currentY, 140, 16);
+            }
+            
+            Renderer.drawRect(Renderer.color(matchRgb.r, matchRgb.g, matchRgb.b), 30, currentY, 60, 14);
             let matchName = match.colorName;
             if (matchName.length > 30) matchName = matchName.substring(0, 30) + "...";
-            Renderer.drawStringWithShadow("§72. §b" + matchName, 95, startY + 23);
-            const isFade2 = this.checkFadeDye(match.colorName);
+            Renderer.drawStringWithShadow("§7" + displayNum + ". §b" + matchName, 95, currentY + 3);
             const deColor2 = match.deltaE < 1 ? (isFade2 ? "§9" : "§c") : (match.deltaE < 2 ? (isFade2 ? "§b" : "§d") : (match.deltaE < 5 ? (isFade2 ? "§e" : "§6") : "§7"));
-            Renderer.drawStringWithShadow(deColor2 + match.deltaE.toFixed(2), 550, startY + 23);
-            Renderer.drawStringWithShadow("§7" + match.absoluteDistance, 630, startY + 23);
+            Renderer.drawStringWithShadow(deColor2 + match.deltaE.toFixed(2), 550, currentY + 3);
+            Renderer.drawStringWithShadow("§7" + match.absoluteDistance, 630, currentY + 3);
+            currentY = currentY + 20;
+            displayNum = displayNum + 1;
         }
+    }
+    
+    if (numMatches > 2) {
+        const match = matches[2];
+        const isFade3 = this.checkFadeDye(match.colorName);
         
-        if (numMatches > 2) {
-            const match = matches[2];
+        if (this.showFades || !isFade3) {
             const matchRgb = this.hexToRgb(match.targetHex);
-            Renderer.drawRect(Renderer.color(matchRgb.r, matchRgb.g, matchRgb.b), 30, startY + 40, 60, 14);
+            
+            let tc3 = null;
+            if (!isFade3 && match.deltaE <= 1) tc3 = { r: 255, g: 0, b: 0 };
+            else if (!isFade3 && match.deltaE <= 2) tc3 = { r: 255, g: 105, b: 180 };
+            else if (!isFade3 && match.deltaE <= 5) tc3 = { r: 255, g: 165, b: 0 };
+            else if (isFade3 && match.deltaE <= 1) tc3 = { r: 0, g: 0, b: 255 };
+            else if (isFade3 && match.deltaE <= 2) tc3 = { r: 135, g: 206, b: 250 };
+            else if (isFade3 && match.deltaE <= 5) tc3 = { r: 255, g: 255, b: 0 };
+            
+            if (tc3) {
+                Renderer.drawRect(Renderer.color(tc3.r, tc3.g, tc3.b, 72), 540, currentY, 140, 16);
+            }
+            
+            Renderer.drawRect(Renderer.color(matchRgb.r, matchRgb.g, matchRgb.b), 30, currentY, 60, 14);
             let matchName = match.colorName;
             if (matchName.length > 30) matchName = matchName.substring(0, 30) + "...";
-            Renderer.drawStringWithShadow("§73. §b" + matchName, 95, startY + 43);
-            const isFade3 = this.checkFadeDye(match.colorName);
+            Renderer.drawStringWithShadow("§7" + displayNum + ". §b" + matchName, 95, currentY + 3);
             const deColor3 = match.deltaE < 1 ? (isFade3 ? "§9" : "§c") : (match.deltaE < 2 ? (isFade3 ? "§b" : "§d") : (match.deltaE < 5 ? (isFade3 ? "§e" : "§6") : "§7"));
-            Renderer.drawStringWithShadow(deColor3 + match.deltaE.toFixed(2), 550, startY + 43);
-            Renderer.drawStringWithShadow("§7" + match.absoluteDistance, 630, startY + 43);
+            Renderer.drawStringWithShadow(deColor3 + match.deltaE.toFixed(2), 550, currentY + 3);
+            Renderer.drawStringWithShadow("§7" + match.absoluteDistance, 630, currentY + 3);
         }
-    }   
+    }
+}
 
     handleShiftClick(mouseX, mouseY) {
         const headerY = 50;
@@ -1760,7 +1934,7 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         while (offset < 30 && (startIndex + offset) < totalPieces) {
             const piece = displayPieces[startIndex + offset];
             const isExpanded = this.expandedPieceUuid === piece.uuid;
-            const actualRowHeight = isExpanded ? 80 : rowHeight;
+            const actualRowHeight = isExpanded ? 20 : rowHeight;
             
             ChatLib.chat("§e[DEBUG] Row " + offset + " Y range: " + currentY + "-" + (currentY + actualRowHeight));
             
@@ -1867,6 +2041,9 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         this.scrollOffset = 0;
         this.cachedFilteredPieces = null;
         this.cachedSortedPieces = null;
+        this.lastShowDupesOnly = null; // Force cache refresh
+        this.lastSearchText = ""; // Force cache refresh
+        this.lastHexSearchText = ""; // Force cache refresh
 
         if (this.showFades) {
             ChatLib.chat("§a[Seymour GUI] §7Showing §efade dyes");
@@ -1876,7 +2053,7 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
     }
 
     drawDupesButton(screenWidth, screenHeight) {
-        const buttonWidth = 120;
+        const buttonWidth = 85;
         const buttonHeight = 20;
         const buttonX = 20;
         const buttonY = screenHeight - 35;
@@ -1907,7 +2084,7 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         Renderer.drawRect(borderColor, buttonX, buttonY, 2, buttonHeight);
         Renderer.drawRect(borderColor, buttonX + buttonWidth - 2, buttonY, 2, buttonHeight);
         
-        const text = this.showDupesOnly ? "§f§lDupes: ON" : "§f§lShow Dupes";
+        const text = this.showDupesOnly ? "§fDupes" : "§fShow Dupes";
         const textWidth = Renderer.getStringWidth(text);
         const textX = buttonX + (buttonWidth - textWidth) / 2;
         
@@ -1915,9 +2092,9 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
     }
 
     drawFadesButton(screenWidth, screenHeight) {
-        const buttonWidth = 120;
+        const buttonWidth = 85;
         const buttonHeight = 20;
-        const buttonX = 160;
+        const buttonX = 110;
         const buttonY = screenHeight - 35;
         const Mouse = Java.type("org.lwjgl.input.Mouse");
         const mc = Client.getMinecraft();
@@ -1940,7 +2117,7 @@ ChatLib.chat("§a[Seymour GUI] §7GUI opened!");
         Renderer.drawRect(borderColor, buttonX, buttonY + buttonHeight - 2, buttonWidth, 2);
         Renderer.drawRect(borderColor, buttonX, buttonY, 2, buttonHeight);
         Renderer.drawRect(borderColor, buttonX + buttonWidth - 2, buttonY, 2, buttonHeight);
-        const text = this.showFades ? "§f§lFades: ON" : "§f§lShow Fades";
+        const text = "§fShow Fades";
         const textWidth = Renderer.getStringWidth(text);
         const textX = buttonX + (buttonWidth - textWidth) / 2;
         
