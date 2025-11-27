@@ -1,6 +1,6 @@
 {
   "name": "SeymourAnalyzer",
-  "creator": "AllyMe",
+  "creator": "AllyMe + Schnerry",
   "description": "Analyzes Seymour Armour colors and matches them to known hypxel hexes with many more features",
   "version": "1.2.0",
   "entry": "index.js",
