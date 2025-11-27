@@ -530,12 +530,6 @@ function matchesWordPattern(hex) {
   return null;
 }
 
-// Check if item is a Velvet Top Hat
-function isVelvetTopHat(itemName) {
-  const name = ChatLib.removeFormatting(itemName);
-  return name.includes("Velvet Top Hat");
-}
-
 // Extract piece type from item name
 function getPieceType(itemName) {
   const name = ChatLib.removeFormatting(itemName).toLowerCase();
@@ -1309,6 +1303,130 @@ function checkForDupeHex(itemHex, itemUuid) {
   return null;
 }
 
+function readItemFrames () {
+  if (!scanningEnabled && !exportingEnabled) return;
+
+  let itemFrames = []
+  let pieceCount = 0;
+  try {
+    const ItemFrameClass = Java.type("net.minecraft.entity.item.EntityItemFrame");
+    const found = World.getAllEntitiesOfType(ItemFrameClass);
+    if (found && found.length !== undefined) {
+      itemFrames = found;
+    } else {
+      itemFrames = [];
+    }
+  } catch (e) {
+    // ChatLib.chat("§c[Seymour Analyzer] §7Error reading item frames: " + e);
+  }
+
+  if (!itemFrames || itemFrames.length === 0) {
+    return;
+  }
+  // try {
+    for (let i = 0; i < itemFrames.length; i++) {
+      const frame = itemFrames[i];
+      let mcItem = frame.getEntity().func_82335_i(); // getDisplayedItem()
+      const chestLoc = { x: Math.floor(frame.getX()), y: Math.floor(frame.getY()), z: Math.floor(frame.getZ()) };
+      if (!mcItem) continue;
+      const ctItem = new Item(mcItem);
+      const itemName = ctItem.getName();
+      if (!isSeymourArmor(itemName)) continue;
+      const uuid = extractUuidFromItem(ctItem);
+      if (!uuid) continue;
+      if (collection[uuid] && !exportingEnabled) continue;
+      if (exportingEnabled && exportCollection && exportCollection[uuid]) continue;
+      const loreRaw = ctItem.getLore();
+      const itemHex = extractHexFromLore(loreRaw);  
+      if (!itemHex) continue;
+      const analysis = analyzeSeymourArmor(itemHex, itemName);
+      if (!analysis) continue;
+      const best = analysis.bestMatch;
+      const itemRgb = hexToRgb(itemHex);
+      const targetRgb = hexToRgb(best.targetHex);
+      const absoluteDist = Math.abs(itemRgb.r - targetRgb.r) + 
+                           Math.abs(itemRgb.g - targetRgb.g) + 
+                           Math.abs(itemRgb.b - targetRgb.b);
+      const wordMatch = matchesWordPattern(itemHex);
+      const specialPattern = matchesSpecialPattern(itemHex);
+      // Store top 3 matches
+      const top3Matches = [];
+      for (let m = 0; m < 3 && m < analysis.top3Matches.length; m++) {
+        const match = analysis.top3Matches[m];
+        const matchRgb = hexToRgb(match.targetHex);
+        top3Matches.push({
+          colorName: match.name,
+          targetHex: match.targetHex,
+          deltaE: match.deltaE,
+          absoluteDistance: Math.abs(itemRgb.r - matchRgb.r) + 
+                            Math.abs(itemRgb.g - matchRgb.g) + 
+                            Math.abs(itemRgb.b - matchRgb.b),
+          tier: analysis.tier
+        });
+      }
+      pieceCount++;
+      if (scanningEnabled && !exportingEnabled) {
+      collection[uuid] = {
+        pieceName: ChatLib.removeFormatting(itemName),
+        uuid: uuid,
+        hexcode: itemHex,
+        specialPattern: specialPattern ? specialPattern.type : null,
+        bestMatch: {
+          colorName: best.name,
+          targetHex: best.targetHex,
+          deltaE: best.deltaE,
+          absoluteDistance: absoluteDist,
+          tier: analysis.tier
+        },
+        allMatches: top3Matches,
+        wordMatch: wordMatch ? wordMatch.word : null,
+        chestLocation: chestLoc,
+        timestamp: Date.now()
+      };
+      }
+
+      if (exportingEnabled) {
+        // Ensure a plain in-memory object exists to hold export pieces (not a PogObject)
+        if (typeof exportCollection === "undefined" || exportCollection === null) {
+          exportCollection = {};
+        }
+        if (!exportCollection[uuid]) {
+          exportCollection[uuid] = {
+            pieceName: ChatLib.removeFormatting(itemName),
+            uuid: uuid,
+            hexcode: itemHex,
+            specialPattern: specialPattern ? specialPattern.type : null,
+            bestMatch: {
+              colorName: best.name,
+              targetHex: best.targetHex,
+              deltaE: best.deltaE,
+              absoluteDistance: absoluteDist,
+              tier: analysis.tier
+            },
+            allMatches: top3Matches,
+            wordMatch: wordMatch ? wordMatch.word : null,
+            chestLocation: chestLoc,
+            timestamp: Date.now()
+          };
+        }
+      }
+    }
+    if (pieceCount > 0 && !exportingEnabled) {
+      collection.save();
+      ChatLib.chat("§a[Seymour Analyzer] §7Scanned §e" + pieceCount + "§7 new piece" + (pieceCount === 1 ? "" : "s") + "! Total: §e" + Object.keys(collection).length);
+    }
+    else if (pieceCount > 0 && exportingEnabled) {
+      ChatLib.chat("§a[Seymour Analyzer] §7Added §e" + pieceCount + "§7 piece" + (pieceCount === 1 ? "" : "s") + " to export collection! Total: §e" + Object.keys(exportCollection).length);
+    }
+  //   } catch (e) {
+  //   ChatLib.chat("§c[Seymour Analyzer] §7Error processing item frames: " + e);
+  // }
+}
+
+register("command", () => {
+  readItemFrames();
+}).setName("seymour-scan-frames");
+
 // ===== SCAN CHEST CONTENTS =====
 function scanChestContents() {
   if (!scanningEnabled && !exportingEnabled) return;
@@ -1476,6 +1594,17 @@ register("tick", function() {
         needsRecache = false;
       }, 20);
     }
+  }
+});
+
+// Add tick handler to scan for item frames periodically
+let lastItemFrameScanTime = 0;
+register("tick", function() {
+  if (!scanningEnabled && !exportingEnabled) return;
+  const now = Date.now();
+  if (now - lastItemFrameScanTime >= 5000) { // every 5 seconds
+    readItemFrames();
+    lastItemFrameScanTime = now;
   }
 });
 
@@ -2402,16 +2531,16 @@ register("renderWorld", function(partialTicks) {
       
       const r = 0.0, g = 1.0, b = 0.0, a = 0.8;
       
-      // Bottom face
-      worldRenderer.func_181668_a(3, DefaultVertexFormats.field_181706_f);
+      // Bottom face (use LINE_LOOP so the rectangle closes)
+      worldRenderer.func_181668_a(2, DefaultVertexFormats.field_181706_f);
       worldRenderer.func_181662_b(chest.x, chest.y, chest.z).func_181666_a(r, g, b, a).func_181675_d();
       worldRenderer.func_181662_b(chest.x + 1, chest.y, chest.z).func_181666_a(r, g, b, a).func_181675_d();
       worldRenderer.func_181662_b(chest.x + 1, chest.y, chest.z + 1).func_181666_a(r, g, b, a).func_181675_d();
       worldRenderer.func_181662_b(chest.x, chest.y, chest.z + 1).func_181666_a(r, g, b, a).func_181675_d();
       tessellator.func_78381_a();
       
-      // Top face
-      worldRenderer.func_181668_a(3, DefaultVertexFormats.field_181706_f);
+      // Top face (use LINE_LOOP so the rectangle closes)
+      worldRenderer.func_181668_a(2, DefaultVertexFormats.field_181706_f);
       worldRenderer.func_181662_b(chest.x, chest.y + 1, chest.z).func_181666_a(r, g, b, a).func_181675_d();
       worldRenderer.func_181662_b(chest.x + 1, chest.y + 1, chest.z).func_181666_a(r, g, b, a).func_181675_d();
       worldRenderer.func_181662_b(chest.x + 1, chest.y + 1, chest.z + 1).func_181666_a(r, g, b, a).func_181675_d();
@@ -3418,7 +3547,7 @@ function searchForHexes(hexes) {
       const pieceHex = piece.hexcode.toUpperCase();
       
       if (pieceHex === searchHex) {
-        const chestKey = piece.chestLocation.x + "," + piece.chestLocation.y + "," + piece.chestLocation.z;
+        const chestKey = piece.chestLocation.x + ", " + piece.chestLocation.y + ", " + piece.chestLocation.z;
         
         foundPieces.push({
           name: piece.pieceName,
