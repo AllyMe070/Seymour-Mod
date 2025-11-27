@@ -2054,20 +2054,26 @@ if (shouldHighlight && tc && shouldDrawMainHighlight) {
     }
 
     toggleFadesFilter() {
-        this.showFades = !this.showFades;
-        this.scrollOffset = 0;
-        this.cachedFilteredPieces = null;
-        this.cachedSortedPieces = null;
-        this.lastShowDupesOnly = null; // Force cache refresh
-        this.lastSearchText = ""; // Force cache refresh
-        this.lastHexSearchText = ""; // Force cache refresh
+    this.showFades = !this.showFades;
+    this.scrollOffset = 0;
+    this.cachedFilteredPieces = null;
+    this.cachedSortedPieces = null;
+    this.lastShowDupesOnly = null;
+    this.lastSearchText = "";
+    this.lastHexSearchText = "";
+    
+    // Always sort by deltaE when toggling fades
+    this.sortColumn = "deltaE";
+    this.sortDirection = "asc";
+    this.lastSortColumn = null;
+    this.lastSortDirection = "asc";
 
-        if (this.showFades) {
-            ChatLib.chat("§a[Seymour GUI] §7Showing §efade dyes");
-        } else {
-            ChatLib.chat("§a[Seymour GUI] §7Hiding §efade dyes");
-        }
+    if (this.showFades) {
+        ChatLib.chat("§a[Seymour GUI] §7Showing §efade dyes");
+    } else {
+        ChatLib.chat("§a[Seymour GUI] §7Hiding §efade dyes");
     }
+}
 
     drawDupesButton(screenWidth, screenHeight) {
         const buttonWidth = 85;
