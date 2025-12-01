@@ -714,7 +714,11 @@ function getChestLocationFromLooking() {
       
       const isChest = blockID === 54 || blockID === 146 || 
                       blockName.includes("chest") || 
-                      blockName.includes("trapped_chest");
+                      blockName.includes("trapped_chest") ||
+                      blockName.includes("hopper") ||
+                      blockName.includes("dropper") ||
+                      blockName.includes("dispenser")
+                      ;
       
       if (isChest) {
         if (DEBUG) {
@@ -2836,7 +2840,7 @@ if (arg1 && arg1.toLowerCase() === "clear") {
         ChatLib.chat("  §7" + piece.name + " §f#" + piece.hex);
         ChatLib.chat("    §7at §e" + piece.location);
       }
-      ChatLib.chat("§a§lHighlighting " + highlightedChests.length + " chest" + (highlightedChests.length === 1 ? "" : "s") + "!");
+      ChatLib.chat("§a§lHighlighting " + highlightedChests.length + " container" + (highlightedChests.length === 1 ? "" : "s") + "!");
       var message = new TextComponent("§4[Stop highlighting]");
       message.setClick("run_command", "/seymour search clear");
       ChatLib.chat(message)
