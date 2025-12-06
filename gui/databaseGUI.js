@@ -1729,7 +1729,6 @@ if (shouldHighlight && tc && shouldDrawMainHighlight) {
                 
                 this.contextMenu = null;
                 optionClicked = true;
-                this.reopenCurrentPage();
             }
         }
         
