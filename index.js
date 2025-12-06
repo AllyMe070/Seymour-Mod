@@ -12,7 +12,6 @@ import { WordMatchesGUI } from "./gui/WordMatchesGUI";
 import { PatternMatchesGUI } from "./gui/PatternMatchesGUI";
 
 global.pendingDatabaseHexSearch = null;
-
 // Performance tracking
 let perfLog = [];
 
@@ -53,7 +52,8 @@ const data = new PogObject("SeymourAnalyzer", {
   showHighFades: false
 });
 
-const collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
+global.collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
+collection = global.collection;
 // Ensure PogObject files exist but don't overwrite non-empty files
 (function() {
   const File = Java.type("java.io.File");
@@ -105,73 +105,78 @@ const collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
   this.customColors = customColors;
 })();
 
-// Force reload collection from disk WITHOUT FileLib
-try {
-  const File = Java.type("java.io.File");
-  const FileReader = Java.type("java.io.FileReader");
-  const BufferedReader = Java.type("java.io.BufferedReader");
-  
-  const collectionFile = new File("config/ChatTriggers/modules/SeymourAnalyzer/Collection.json");
-  
-  if (collectionFile.exists()) {
-    const reader = new BufferedReader(new FileReader(collectionFile));
-    let line;
-    let jsonString = "";
+// Reload collection from disk WITHOUT FileLib (call whenever needed)
+function reloadCollectionFromDisk() {
+  try {
+    const File = Java.type("java.io.File");
+    const FileReader = Java.type("java.io.FileReader");
+    const BufferedReader = Java.type("java.io.BufferedReader");
     
-    while ((line = reader.readLine()) !== null) {
-      jsonString += line;
-    }
-    reader.close();
+    const collectionFile = new File("config/ChatTriggers/modules/SeymourAnalyzer/Collection.json");
     
-    if (jsonString) {
-      const parsed = JSON.parse(jsonString);
+    if (collectionFile.exists()) {
+      const reader = new BufferedReader(new FileReader(collectionFile));
+      let line;
+      let jsonString = "";
       
-      // Clear existing collection data
-      for (const key in collection) {
-        if (collection.hasOwnProperty(key) && key !== "save" && key !== "_data") {
-          delete collection[key];
-        }
+      while ((line = reader.readLine()) !== null) {
+        jsonString += line;
       }
+      reader.close();
       
-      // Load fresh data with deep copy to avoid reference issues
-      for (const key in parsed) {
-        if (parsed.hasOwnProperty(key)) {
-          const piece = parsed[key];
-          // Deep copy the piece to avoid any reference issues
-          collection[key] = {
-            pieceName: piece.pieceName,
-            uuid: piece.uuid,
-            hexcode: piece.hexcode,
-            specialPattern: piece.specialPattern,
-            bestMatch: piece.bestMatch ? {
-              colorName: piece.bestMatch.colorName,
-              targetHex: piece.bestMatch.targetHex,
-              deltaE: piece.bestMatch.deltaE,
-              absoluteDistance: piece.bestMatch.absoluteDistance,
-              tier: piece.bestMatch.tier
-            } : null,
-            allMatches: piece.allMatches ? piece.allMatches.map(function(m) {
-              return {
-                colorName: m.colorName,
-                targetHex: m.targetHex,
-                deltaE: m.deltaE,
-                absoluteDistance: m.absoluteDistance,
-                tier: m.tier
-              };
-            }) : [],
-            wordMatch: piece.wordMatch,
-            chestLocation: piece.chestLocation,
-            timestamp: piece.timestamp
-          };
+      if (jsonString) {
+        const parsed = JSON.parse(jsonString);
+        
+        // Clear existing collection data
+        for (const key in collection) {
+          if (collection.hasOwnProperty(key) && key !== "save" && key !== "_data") {
+            delete collection[key];
+          }
         }
+        
+        // Load fresh data with deep copy to avoid reference issues
+        for (const key in parsed) {
+          if (parsed.hasOwnProperty(key)) {
+            const piece = parsed[key];
+            collection[key] = {
+              pieceName: piece.pieceName,
+              uuid: piece.uuid,
+              hexcode: piece.hexcode,
+              specialPattern: piece.specialPattern,
+              bestMatch: piece.bestMatch ? {
+                colorName: piece.bestMatch.colorName,
+                targetHex: piece.bestMatch.targetHex,
+                deltaE: piece.bestMatch.deltaE,
+                absoluteDistance: piece.bestMatch.absoluteDistance,
+                tier: piece.bestMatch.tier
+              } : null,
+              allMatches: piece.allMatches ? piece.allMatches.map(function(m) {
+                return {
+                  colorName: m.colorName,
+                  targetHex: m.targetHex,
+                  deltaE: m.deltaE,
+                  absoluteDistance: m.absoluteDistance,
+                  tier: m.tier
+                };
+              }) : [],
+              wordMatch: piece.wordMatch,
+              chestLocation: piece.chestLocation,
+              timestamp: piece.timestamp
+            };
+          }
+        }
+        
+        // ChatLib.chat("§a[Seymour] Reloaded " + Object.keys(parsed).length + " pieces from disk");
       }
-      
-      // ChatLib.chat("§a[Seymour] Reloaded " + Object.keys(parsed).length + " pieces from disk");
     }
+  } catch (e) {
+    ChatLib.chat("§c[Seymour] Failed to reload collection: " + e);
   }
-} catch (e) {
-  ChatLib.chat("§c[Seymour] Failed to reload collection: " + e);
 }
+
+// Expose globally and run once at load so behavior remains the same
+global.reloadCollectionFromDisk = reloadCollectionFromDisk;
+reloadCollectionFromDisk();
 
 // UUID cache for fast lookups - MOVED HERE so we can populate it early
 const uuidCache = {};
@@ -2745,11 +2750,15 @@ register("command", function() {
         return;
       }
       scanningEnabled = true;
+      clearAllCaches();
       ChatLib.chat("§a[Seymour Analyzer] §7Scanning §aenabled§7! Open chests to automatically scan Seymour pieces.");
       return;
     } else if (arg2.toLowerCase() === "stop") {
       scanningEnabled = false;
       const count = Object.keys(collection).length;
+      dbGui.collectionChanged = true;
+      clearAllCaches();
+      reloadCollectionFromDisk();
       ChatLib.chat("§a[Seymour Analyzer] §7Scanning §cdisabled§7! Collection has §e" + count + " §7pieces.");
       return;
     } else {
@@ -3489,8 +3498,8 @@ if (arg1 && arg1.toLowerCase() === "clear") {
 
 // ===== GUI INSTANCES =====
 const dbGui = new DatabaseGUI();
-const armorGui = new ArmorChecklistGUI(collection);
-const bestSetsGui = new BestSetsGUI(collection);
+const armorGui = new ArmorChecklistGUI();
+const bestSetsGui = new BestSetsGUI();
 
 // Commands to open GUIs
 register("command", (arg1) => {
@@ -3626,3 +3635,10 @@ function updateSearchMatchesInCache() {
     needsRecache = true;
   }
 }
+
+// write a command to reload collection from disk
+register("command", () => {
+  clearAllCaches();
+  reloadCollectionFromDisk();
+  ChatLib.chat("§a[Seymour Analyzer] §7Reloaded collection from disk! §e" + Object.keys(collection).length + " §7pieces loaded.");
+}).setName("seymourreload").setAliases("sreload");

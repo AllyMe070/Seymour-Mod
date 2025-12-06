@@ -5,7 +5,7 @@ import PogObject from "PogData";
 
 export class WordMatchesGUI {
     constructor() {
-        this.collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
+        this.collection = global.collection
         this.wordList = new PogObject("SeymourAnalyzer", {}, "Words.json");
         this.scrollOffset = 0;
         this.isOpen = false;

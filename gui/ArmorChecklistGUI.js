@@ -5,8 +5,8 @@ import PogObject from "PogData";
 import { TARGET_COLORS, FADE_DYES } from "../colorDatabase.js";
 
 export class ArmorChecklistGUI {
-    constructor(collection) {
-        this.collection = collection;
+    constructor() {
+        this.collection = global.collection;
         this.isOpen = false;
         this.gui = null;
         this.scrollOffset = 0;

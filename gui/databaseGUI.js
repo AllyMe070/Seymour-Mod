@@ -6,7 +6,7 @@ import PogObject from "PogData";
 export class DatabaseGUI {
     constructor() {
         // Load the collection
-        this.collection = new PogObject("SeymourAnalyzer", {}, "Collection.json");
+        this.collection = global.collection;
         this.scrollOffset = 0;
         this.isSwitchingGui = false;
         this.isOpen = false;
@@ -33,6 +33,7 @@ export class DatabaseGUI {
         this.showFades = true;
         this.lastShowDupesOnly = false;
         this.cachedTierCounts = null;
+        this.collectionChanged = false;
     }
 
     open(hexSearchText = null, searchText = null) {
@@ -48,7 +49,7 @@ export class DatabaseGUI {
         
         try {
             const keys = Object.keys(this.collection);
-            
+
             let loadIndex = 0;
             while (loadIndex < keys.length) {
                 const uuid = keys[loadIndex];
@@ -1628,6 +1629,7 @@ if (shouldHighlight && tc && shouldDrawMainHighlight) {
                     // Remove from collection
                     delete this.collection[piece.uuid];
                     this.collection.save();
+                    this.collectionChanged = true;
                     
                     
                     // Rebuild the allPieces array without this piece
@@ -1668,6 +1670,7 @@ if (shouldHighlight && tc && shouldDrawMainHighlight) {
                 
                 this.contextMenu = null;
                 optionClicked = true;
+
             }
         }
         
@@ -1687,6 +1690,7 @@ if (shouldHighlight && tc && shouldDrawMainHighlight) {
                     // Remove from collection
                     delete this.collection[piece.uuid];
                     this.collection.save();
+                    this.collectionChanged = true;
                     
                     // Rebuild the allPieces array without this piece
                     const newAllPieces = [];
@@ -1725,6 +1729,7 @@ if (shouldHighlight && tc && shouldDrawMainHighlight) {
                 
                 this.contextMenu = null;
                 optionClicked = true;
+                this.reopenCurrentPage();
             }
         }
         

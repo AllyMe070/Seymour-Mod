@@ -4,8 +4,8 @@
 import PogObject from "PogData";
 
 export class BestSetsGUI {
-    constructor(collection) {
-        this.collection = collection;
+    constructor() {
+        this.collection = global.collection;
         this.isOpen = false;
         this.gui = null;
         this.scrollOffset = 0;
