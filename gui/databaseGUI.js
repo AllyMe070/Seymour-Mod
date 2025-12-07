@@ -75,6 +75,7 @@ export class DatabaseGUI {
                 const storedAbsDist = piece.bestMatch ? (piece.bestMatch.absoluteDistance + 0) : 999;
                 const storedTier = piece.bestMatch ? (piece.bestMatch.tier + 0) : 4;
                 const storedIsCustom = this.checkCustomColor(storedMatchName);
+                const storedIsFadeDye = this.checkFadeDye(storedMatchName);
                 
                 // Create object using stored variables
                 const newPiece = {};
@@ -87,6 +88,7 @@ export class DatabaseGUI {
                 newPiece.absoluteDistance = storedAbsDist;
                 newPiece.tier = storedTier;
                 newPiece.isCustomColor = storedIsCustom;
+                newPiece.isFadeDye = storedIsFadeDye;
                 newPiece.nameLower = storedName.toLowerCase();
                 newPiece.matchLower = storedMatchName.toLowerCase();
                 newPiece.hexLower = storedHex.toLowerCase();
