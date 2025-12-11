@@ -1486,7 +1486,7 @@ if (visibleStages > 19) {
         const latch = new CountDownLatch(stages.length);
         const completed = new AtomicInteger(0);
 
-        try { ChatLib.chat("§a[Armor Checklist] Starting parallel fade-dye calc: threads=" + threadCount + ", stages=" + stages.length + ", collection=" + Object.keys(self.collection).length); } catch (e) {}
+        // try { ChatLib.chat("§a[Armor Checklist] Starting parallel fade-dye calc: threads=" + threadCount + ", stages=" + stages.length + ", collection=" + Object.keys(self.collection).length); } catch (e) {}
 
         // Create a plain snapshot of the collection to avoid concurrent access to PogObject
         const collectionKeys = Object.keys(self.collection || {});
@@ -1508,7 +1508,7 @@ if (visibleStages > 19) {
             ck = ck + 1;
         }
 
-        try { ChatLib.chat("§a[Armor Checklist] collection snapshot size=" + collectionSnapshot.length); } catch (e) {}
+        // try { ChatLib.chat("§a[Armor Checklist] collection snapshot size=" + collectionSnapshot.length); } catch (e) {}
 
         // Progress logging threshold: every ~10% or at least every 1
         const progressThreshold = Math.max(1, Math.floor(stages.length / 10));
@@ -1562,9 +1562,9 @@ if (visibleStages > 19) {
                             // Update progress and countdown latch
                             const done = completed.incrementAndGet();
                             self.calculationProgress = done;
-                            if (done % progressThreshold === 0 || done === stages.length) {
-                                try { ChatLib.chat("§a[Armor Checklist] fade-dye calc progress: " + done + "/" + stages.length); } catch (e) {}
-                            }
+                            // if (done % progressThreshold === 0 || done === stages.length) {
+                            //     try { ChatLib.chat("§a[Armor Checklist] fade-dye calc progress: " + done + "/" + stages.length); } catch (e) {}
+                            // }
                             latch.countDown();
                         }
                     }
@@ -1786,7 +1786,7 @@ if (visibleStages > 19) {
             const latch = new CountDownLatch(stages.length);
             const completed = new AtomicInteger(0);
 
-            try { ChatLib.chat("§a[Armor Checklist] Starting parallel normal calc: threads=" + threadCount + ", stages=" + stages.length + ", collection=" + Object.keys(self.collection).length); } catch (e) {}
+            // try { ChatLib.chat("§a[Armor Checklist] Starting parallel normal calc: threads=" + threadCount + ", stages=" + stages.length + ", collection=" + Object.keys(self.collection).length); } catch (e) {}
 
             // Create a plain snapshot of the collection to avoid concurrent access to PogObject
             const collectionKeys = Object.keys(self.collection || {});
@@ -1808,7 +1808,7 @@ if (visibleStages > 19) {
                 ck = ck + 1;
             }
 
-            try { ChatLib.chat("§a[Armor Checklist] collection snapshot size=" + collectionSnapshot.length); } catch (e) {}
+            // try { ChatLib.chat("§a[Armor Checklist] collection snapshot size=" + collectionSnapshot.length); } catch (e) {}
 
             // Progress logging threshold: every ~10% or at least every 1
             const progressThreshold = Math.max(1, Math.floor(stages.length / 10));
@@ -1864,9 +1864,9 @@ if (visibleStages > 19) {
                             } finally {
                                 const done = completed.incrementAndGet();
                                 self.calculationProgress = done;
-                                if (done % progressThreshold === 0 || done === stages.length) {
-                                    try { ChatLib.chat("§a[Armor Checklist] normal calc progress: " + done + "/" + stages.length); } catch (e) {}
-                                }
+                                // if (done % progressThreshold === 0 || done === stages.length) {
+                                //     try { ChatLib.chat("§a[Armor Checklist] normal calc progress: " + done + "/" + stages.length); } catch (e) {}
+                                // }
                                 latch.countDown();
                             }
                         }
@@ -1901,7 +1901,7 @@ if (visibleStages > 19) {
                         } catch (e) {}
                     } finally {
                         try { pool.shutdown(); } catch (e) {}
-                        try { ChatLib.chat("§a[Armor Checklist] normal calc finished"); } catch (e) {}
+                        // try { ChatLib.chat("§a[Armor Checklist] normal calc finished"); } catch (e) {}
                     }
                 }
             });
