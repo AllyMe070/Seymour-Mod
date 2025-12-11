@@ -1,4 +1,4 @@
-/// <reference types="../CTAutocomplete" />
+/// <reference types=".../CTAutocomplete" />
 /// <reference lib="es2015" />
 
 import PogObject from "PogData";
@@ -1442,92 +1442,213 @@ if (visibleStages > 19) {
     }
 
     calculateNextFadeDyeStage(categoryName, stageIndex) {
+        // Use a parallel worker pool to compute candidates for all stages asynchronously.
+        // This function expects to be called with stageIndex === 0 (initial trigger).
         const stages = this.categories[categoryName];
-        
-        // Phase 1: Collect all candidates for all stages
-        if (stageIndex === 0) {
-            this.fadeDyeOptimalCache[categoryName].allCandidates = {
-                helmet: [],
-                chestplate: [],
-                leggings: [],
-                boots: []
-            };
+        if (!stages || stages.length === 0) return;
+        if (stageIndex !== 0) return; // Only start once
+
+        const self = this;
+
+        // Init state (some of this is already done by startFadeDyeCalculation, but keep safe)
+        this.isCalculating = true;
+        this.calculationProgress = 0;
+        this.calculationTotal = stages.length;
+
+        // Ensure matchesByIndex entries exist (startFadeDyeCalculation should have done this)
+        if (!this.fadeDyeOptimalCache[categoryName].matchesByIndex) {
+            this.fadeDyeOptimalCache[categoryName].matchesByIndex = {};
+            let si = 0;
+            while (si < stages.length) {
+                this.fadeDyeOptimalCache[categoryName].matchesByIndex[si] = {
+                    helmet: null,
+                    chestplate: null,
+                    leggings: null,
+                    boots: null,
+                    calculated: false,
+                    stageHex: stages[si].hex
+                };
+                si = si + 1;
+            }
         }
-        
-        if (stageIndex >= stages.length) {
-            // Phase 2: Assign optimal matches (each piece used only once per category)
-            this.assignOptimalFadeDyeMatches(categoryName);
-            
-            // All done!
-            this.isCalculating = false;
-            this.calculationProgress = 0;
-            this.calculationTotal = 0;
-            
-            // Save to disk
-            this.cacheStorage.matchCache = this.matchCache;
-            this.cacheStorage.fadeDyeOptimalCache = this.fadeDyeOptimalCache;
-            this.cacheStorage.normalColorCache = this.normalColorCache;
-            this.cacheStorage.collectionSize = this.collectionSize;
-            this.cacheStorage.lastUpdated = Date.now();
-            this.cacheStorage.save();
-            
-            return;
-        }
-        
-        const stage = stages[stageIndex];
-        const targetLab = this.hexToLab(stage.hex);
-        const pieceTypes = ["helmet", "chestplate", "leggings", "boots"];
-        
-        // Find ALL possible matches for each piece type for THIS stage
-        let p = 0;
-        while (p < 4) {
-            const pieceType = pieceTypes[p];
-            
-            const keys = Object.keys(this.collection);
-            let k = 0;
-            while (k < keys.length) {
-                const uuid = keys[k];
-                const piece = this.collection[uuid];
-                
+
+        // Per-stage worker will write a .candidates object into its own matchesByIndex[index]
+        // to avoid concurrent modification of shared aggregated arrays.
+        const JavaRuntime = Java.type("java.lang.Runtime");
+        const Executors = Java.type("java.util.concurrent.Executors");
+        const CountDownLatch = Java.type("java.util.concurrent.CountDownLatch");
+        const AtomicInteger = Java.type("java.util.concurrent.atomic.AtomicInteger");
+
+        // Use as many threads as possible: cap at number of CPU logical processors
+        const cpus = Math.max(1, JavaRuntime.getRuntime().availableProcessors());
+        const threadCount = Math.min(cpus, stages.length);
+        const pool = Executors.newFixedThreadPool(threadCount);
+        const latch = new CountDownLatch(stages.length);
+        const completed = new AtomicInteger(0);
+
+        try { ChatLib.chat("§a[Armor Checklist] Starting parallel fade-dye calc: threads=" + threadCount + ", stages=" + stages.length + ", collection=" + Object.keys(self.collection).length); } catch (e) {}
+
+        // Create a plain snapshot of the collection to avoid concurrent access to PogObject
+        const collectionKeys = Object.keys(self.collection || {});
+        const collectionSnapshot = [];
+        let ck = 0;
+        while (ck < collectionKeys.length) {
+            try {
+                const uuid = collectionKeys[ck];
+                const piece = self.collection[uuid];
                 if (piece && typeof piece === 'object' && piece.pieceName && piece.hexcode) {
-                    const detectedType = this.getPieceType(piece.pieceName);
-                    
-                    if (detectedType === pieceType) {
-                        const pieceLab = this.hexToLab(piece.hexcode);
-                        const deltaE = Math.sqrt(
-                            Math.pow(targetLab.L - pieceLab.L, 2) + 
-                            Math.pow(targetLab.a - pieceLab.a, 2) + 
-                            Math.pow(targetLab.b - pieceLab.b, 2)
-                        );
-                        
-                        if (deltaE <= 5) {
-                            // Store with STAGE INDEX instead of just hex
-                            this.fadeDyeOptimalCache[categoryName].allCandidates[pieceType].push({
-                                stageIndex: stageIndex,  // NEW: track stage index
-                                stageHex: stage.hex,
-                                uuid: uuid,
-                                piece: piece,
-                                deltaE: deltaE
-                            });
-                            
-                        }
+                    const detectedType = self.getPieceType(piece.pieceName);
+                    if (detectedType) {
+                        // Precompute Lab to avoid concurrent writes to labCache from multiple threads
+                        const pieceLab = self.hexToLab(piece.hexcode);
+                        collectionSnapshot.push({ uuid: uuid, name: piece.pieceName, hex: piece.hexcode, type: detectedType, lab: pieceLab });
                     }
                 }
-                
-                k = k + 1;
-            }
-            
-            p = p + 1;
+            } catch (e) {}
+            ck = ck + 1;
         }
-        
-        // Mark this stage as having candidates collected (but not assigned yet)
-        this.calculationProgress = stageIndex + 1;
-        
-        // Continue with next stage
-        const self = this;
-        setTimeout(function() {
-            self.calculateNextFadeDyeStage(categoryName, stageIndex + 1);
-        }, 5);
+
+        try { ChatLib.chat("§a[Armor Checklist] collection snapshot size=" + collectionSnapshot.length); } catch (e) {}
+
+        // Progress logging threshold: every ~10% or at least every 1
+        const progressThreshold = Math.max(1, Math.floor(stages.length / 10));
+
+        // Submit a task per stage
+        let s = 0;
+        while (s < stages.length) {
+            (function(stageIdx) {
+                const runnable = new (Java.type("java.lang.Runnable"))({
+                    run: function() {
+                        try {
+                            const stage = stages[stageIdx];
+                            const targetLab = self.hexToLab(stage.hex);
+                            const localCandidates = { helmet: [], chestplate: [], leggings: [], boots: [] };
+
+                            // Iterate over the snapshot (safe, plain JS objects)
+                            let si3 = 0;
+                            while (si3 < collectionSnapshot.length) {
+                                try {
+                                    const item = collectionSnapshot[si3];
+                                    const detectedType = item.type;
+                                    const pieceLab = item.lab;
+                                    const deltaE = Math.sqrt(
+                                        Math.pow(targetLab.L - pieceLab.L, 2) +
+                                        Math.pow(targetLab.a - pieceLab.a, 2) +
+                                        Math.pow(targetLab.b - pieceLab.b, 2)
+                                    );
+                                    if (deltaE <= 5) {
+                                        localCandidates[detectedType].push({
+                                            stageIndex: stageIdx,
+                                            stageHex: stage.hex,
+                                            uuid: item.uuid,
+                                            piece: { pieceName: item.name, hexcode: item.hex },
+                                            deltaE: deltaE
+                                        });
+                                    }
+                                } catch (innerE) {
+                                    // Ignore per-piece errors but log once
+                                }
+                                si3 = si3 + 1;
+                            }
+
+                            // Store local results onto the per-index cache object (no cross-index conflicts)
+                            try {
+                                const idxEntry = self.fadeDyeOptimalCache[categoryName].matchesByIndex[stageIdx];
+                                idxEntry.candidates = localCandidates;
+                            } catch (e) {
+                                // If something went wrong, silently continue
+                            }
+                        } finally {
+                            // Update progress and countdown latch
+                            const done = completed.incrementAndGet();
+                            self.calculationProgress = done;
+                            if (done % progressThreshold === 0 || done === stages.length) {
+                                try { ChatLib.chat("§a[Armor Checklist] fade-dye calc progress: " + done + "/" + stages.length); } catch (e) {}
+                            }
+                            latch.countDown();
+                        }
+                    }
+                });
+                pool.submit(runnable);
+            })(s);
+            s = s + 1;
+        }
+
+        // Non-blocking thread to await all workers and finalize assignment
+        const finalizer = new (Java.type("java.lang.Runnable"))({
+            run: function() {
+                try {
+                    // Wait until all stage tasks complete
+                    latch.await();
+
+                    // Aggregate all per-stage candidates into the required allCandidates structure
+                    const aggregated = {
+                        helmet: [],
+                        chestplate: [],
+                        leggings: [],
+                        boots: []
+                    };
+
+                    let si2 = 0;
+                    while (si2 < stages.length) {
+                        try {
+                            const entry = self.fadeDyeOptimalCache[categoryName].matchesByIndex[si2];
+                            if (entry && entry.candidates) {
+                                const keys = ["helmet", "chestplate", "leggings", "boots"];
+                                let kk = 0;
+                                while (kk < keys.length) {
+                                    const pt = keys[kk];
+                                    const arr = entry.candidates[pt] || [];
+                                    let a = 0;
+                                    while (a < arr.length) {
+                                        aggregated[pt].push(arr[a]);
+                                        a = a + 1;
+                                    }
+                                    kk = kk + 1;
+                                }
+                            }
+                        } catch (e) {
+                            // ignore per-index aggregation errors
+                        }
+                        si2 = si2 + 1;
+                    }
+
+                    // Attach aggregated candidates so assignOptimalFadeDyeMatches can use them
+                    self.fadeDyeOptimalCache[categoryName].allCandidates = aggregated;
+
+                    // Assign optimal matches (this runs on the finalizer thread)
+                    try {
+                        self.assignOptimalFadeDyeMatches(categoryName);
+                    } catch (e) {
+                        // ignore assignment errors
+                    }
+
+                    // Mark completion
+                    self.isCalculating = false;
+                    self.calculationProgress = 0;
+                    self.calculationTotal = 0;
+
+                    // Persist caches
+                    try {
+                        self.cacheStorage.matchCache = self.matchCache;
+                        self.cacheStorage.fadeDyeOptimalCache = self.fadeDyeOptimalCache;
+                        self.cacheStorage.normalColorCache = self.normalColorCache;
+                        self.cacheStorage.collectionSize = self.collectionSize;
+                        self.cacheStorage.lastUpdated = Date.now();
+                        self.cacheStorage.save();
+                    } catch (e) {
+                        // ignore save errors
+                    }
+                } finally {
+                    try {
+                        pool.shutdown();
+                    } catch (e) {}
+                }
+            }
+        });
+
+        // Start finalizer on a new thread so this function returns immediately
+        new (Java.type("java.lang.Thread"))(finalizer).start();
     }
 
     assignOptimalFadeDyeMatches(categoryName) {
@@ -1600,178 +1721,289 @@ if (visibleStages > 19) {
     }
 
     startNormalColorCalculation(categoryName) {
+        // Use a lightweight staged async worker to avoid creating heavy Java thread pools
         if (this.isCalculating) return; // Already calculating
-        
         this.isCalculating = true;
         this.calculationProgress = 0;
-        
-        const stages = this.categories[categoryName];
+
+        const stages = this.categories[categoryName] || [];
         this.calculationTotal = stages.length;
-        
-        // Initialize cache immediately so rows can be drawn
-        this.normalColorCache[categoryName] = {
-            category: categoryName,
-            matches: {}
-        };
-        
-        // Initialize empty matches for all stages
-        let s = 0;
-        while (s < stages.length) {
-            const stage = stages[s];
-            this.normalColorCache[categoryName].matches[stage.hex] = {
+
+        // Initialize normal cache structure
+        if (!this.normalColorCache[categoryName]) {
+            this.normalColorCache[categoryName] = {
+                category: categoryName,
+                matches: {}
+            };
+        } else {
+            this.normalColorCache[categoryName].matches = this.normalColorCache[categoryName].matches || {};
+        }
+
+        // Prepopulate matches entries by HEX so UI can reference them immediately
+        let si = 0;
+        while (si < stages.length) {
+            const stage = stages[si];
+            const hexKey = "" + stage.hex;
+            this.normalColorCache[categoryName].matches[hexKey] = {
                 helmet: null,
                 chestplate: null,
                 leggings: null,
                 boots: null,
-                calculated: false
+                calculated: false,
+                stageHex: stage.hex,
+                // candidates will be filled per-stage in the staged worker
+                candidates: {
+                    helmet: [],
+                    chestplate: [],
+                    leggings: [],
+                    boots: []
+                }
             };
-            s = s + 1;
+            si = si + 1;
         }
-        
-        // Start async calculation stage by stage
-        const self = this;
-        setTimeout(function() {
-            self.calculateNextNormalColorStage(categoryName, 0);
-        }, 10);
-    }
 
-    calculateNextNormalColorStage(categoryName, stageIndex) {
-        const stages = this.categories[categoryName];
-        
-        // Phase 1: Collect all candidates for all stages
-        if (stageIndex === 0) {
-            this.normalColorCache[categoryName].allCandidates = {
-                helmet: [],
-                chestplate: [],
-                leggings: [],
-                boots: []
-            };
-        }
-        
-        if (stageIndex >= stages.length) {
-            // Phase 2: Assign optimal matches (each piece used only once per category)
-            this.assignOptimalNormalColorMatches(categoryName);
-            
-            // All done!
+        // Use a parallel worker pool (same approach as fade dyes) to speed up normal color calculations
+        const self = this;
+        if (!stages || stages.length === 0) {
             this.isCalculating = false;
             this.calculationProgress = 0;
             this.calculationTotal = 0;
-            
-            // Save to disk
-            this.cacheStorage.normalColorCache = this.normalColorCache;
-            this.cacheStorage.lastUpdated = Date.now();
-            this.cacheStorage.save();
-            
-            ChatLib.chat("§a[Armor Checklist] §7Calculation complete!");
             return;
         }
-        
-        const stage = stages[stageIndex];
-        const targetLab = this.hexToLab(stage.hex);
-        const pieceTypes = ["helmet", "chestplate", "leggings", "boots"];
-        
-        // Find ALL possible matches for each piece type for THIS stage
-        let p = 0;
-        while (p < 4) {
-            const pieceType = pieceTypes[p];
-            
-            const keys = Object.keys(this.collection);
-            let k = 0;
-            while (k < keys.length) {
-                const uuid = keys[k];
-                const piece = this.collection[uuid];
-                
-                if (piece && typeof piece === 'object' && piece.pieceName && piece.hexcode) {
-                    const detectedType = this.getPieceType(piece.pieceName);
-                    
-                    if (detectedType === pieceType) {
-                        const pieceLab = this.hexToLab(piece.hexcode);
-                        const deltaE = Math.sqrt(
-                            Math.pow(targetLab.L - pieceLab.L, 2) + 
-                            Math.pow(targetLab.a - pieceLab.a, 2) + 
-                            Math.pow(targetLab.b - pieceLab.b, 2)
-                        );
-                        
-                        if (deltaE <= 5) {
-                            this.normalColorCache[categoryName].allCandidates[pieceType].push({
-                                stageHex: stage.hex,
-                                uuid: uuid,
-                                piece: piece,
-                                deltaE: deltaE
-                            });
+
+        this.calculationTotal = stages.length;
+
+        try {
+            const JavaRuntime = Java.type("java.lang.Runtime");
+            const Executors = Java.type("java.util.concurrent.Executors");
+            const CountDownLatch = Java.type("java.util.concurrent.CountDownLatch");
+            const AtomicInteger = Java.type("java.util.concurrent.atomic.AtomicInteger");
+
+            // Use as many threads as possible: cap at number of CPU logical processors
+            const cpus = Math.max(1, JavaRuntime.getRuntime().availableProcessors());
+            const threadCount = Math.min(cpus, stages.length);
+            const pool = Executors.newFixedThreadPool(threadCount);
+            const latch = new CountDownLatch(stages.length);
+            const completed = new AtomicInteger(0);
+
+            try { ChatLib.chat("§a[Armor Checklist] Starting parallel normal calc: threads=" + threadCount + ", stages=" + stages.length + ", collection=" + Object.keys(self.collection).length); } catch (e) {}
+
+            // Create a plain snapshot of the collection to avoid concurrent access to PogObject
+            const collectionKeys = Object.keys(self.collection || {});
+            const collectionSnapshot = [];
+            let ck = 0;
+            while (ck < collectionKeys.length) {
+                try {
+                    const uuid = collectionKeys[ck];
+                    const piece = self.collection[uuid];
+                    if (piece && typeof piece === 'object' && piece.pieceName && piece.hexcode) {
+                        const detectedType = self.getPieceType(piece.pieceName);
+                        if (detectedType) {
+                            // Precompute Lab to avoid concurrent writes to labCache from multiple threads
+                            const pieceLab = self.hexToLab(piece.hexcode);
+                            collectionSnapshot.push({ uuid: uuid, name: piece.pieceName, hex: piece.hexcode, type: detectedType, lab: pieceLab });
                         }
                     }
-                }
-                
-                k = k + 1;
+                } catch (e) {}
+                ck = ck + 1;
             }
-            
-            p = p + 1;
+
+            try { ChatLib.chat("§a[Armor Checklist] collection snapshot size=" + collectionSnapshot.length); } catch (e) {}
+
+            // Progress logging threshold: every ~10% or at least every 1
+            const progressThreshold = Math.max(1, Math.floor(stages.length / 10));
+
+            let s = 0;
+            while (s < stages.length) {
+                (function(stageIdx) {
+                    const runnable = new (Java.type("java.lang.Runnable"))({
+                        run: function() {
+                            try {
+                                const stage = stages[stageIdx];
+                                const targetLab = self.hexToLab(stage.hex);
+                                const localCandidates = { helmet: [], chestplate: [], leggings: [], boots: [] };
+
+                                // Iterate over the snapshot (safe, plain JS objects)
+                                let si3 = 0;
+                                while (si3 < collectionSnapshot.length) {
+                                    try {
+                                        const item = collectionSnapshot[si3];
+                                        const detectedType = item.type;
+                                        const pieceLab = item.lab;
+                                        const deltaE = Math.sqrt(
+                                            Math.pow(targetLab.L - pieceLab.L, 2) +
+                                            Math.pow(targetLab.a - pieceLab.a, 2) +
+                                            Math.pow(targetLab.b - pieceLab.b, 2)
+                                        );
+                                        if (deltaE <= 5) {
+                                            localCandidates[detectedType].push({
+                                                hex: item.hex,
+                                                name: item.name,
+                                                uuid: item.uuid,
+                                                deltaE: deltaE,
+                                                stageHex: stage.hex,
+                                                stageIndex: stageIdx
+                                            });
+                                        }
+                                    } catch (innerE) {
+                                        try { ChatLib.chat("§c[Armor Checklist] per-piece error: " + innerE); } catch (e) {}
+                                    }
+                                    si3 = si3 + 1;
+                                }
+
+                                // Store into per-hex cache entry
+                                try {
+                                    const hexKey = "" + stage.hex;
+                                    const entry = self.normalColorCache[categoryName].matches[hexKey];
+                                    if (entry) {
+                                        entry.candidates = localCandidates;
+                                    }
+                                } catch (e) {
+                                    try { ChatLib.chat("§c[Armor Checklist] error storing candidates: " + e); } catch (e2) {}
+                                }
+                            } finally {
+                                const done = completed.incrementAndGet();
+                                self.calculationProgress = done;
+                                if (done % progressThreshold === 0 || done === stages.length) {
+                                    try { ChatLib.chat("§a[Armor Checklist] normal calc progress: " + done + "/" + stages.length); } catch (e) {}
+                                }
+                                latch.countDown();
+                            }
+                        }
+                    });
+                    pool.submit(runnable);
+                })(s);
+                s = s + 1;
+            }
+
+            // Finalizer thread to wait for all tasks
+            const finalizer = new (Java.type("java.lang.Runnable"))({
+                run: function() {
+                    try {
+                        latch.await();
+                        try {
+                            self.assignOptimalNormalMatches(categoryName);
+                        } catch (e) {
+                            try { ChatLib.chat("§c[Armor Checklist] Error assigning optimal normal matches: " + e); } catch (e2) {}
+                        }
+
+                        self.isCalculating = false;
+                        self.calculationProgress = 0;
+                        self.calculationTotal = 0;
+
+                        try {
+                            self.cacheStorage.matchCache = self.matchCache;
+                            self.cacheStorage.fadeDyeOptimalCache = self.fadeDyeOptimalCache;
+                            self.cacheStorage.normalColorCache = self.normalColorCache;
+                            self.cacheStorage.collectionSize = self.collectionSize;
+                            self.cacheStorage.lastUpdated = Date.now();
+                            self.cacheStorage.save();
+                        } catch (e) {}
+                    } finally {
+                        try { pool.shutdown(); } catch (e) {}
+                        try { ChatLib.chat("§a[Armor Checklist] normal calc finished"); } catch (e) {}
+                    }
+                }
+            });
+
+            new (Java.type("java.lang.Thread"))(finalizer).start();
+        } catch (e) {
+            // If Java interop fails for some reason, fall back to single-threaded staged processing
+            try { ChatLib.chat("§c[Armor Checklist] Parallel normal calc failed, falling back: " + e); } catch (e2) {}
+            // Fallback: process sequentially (keeps previous behavior but slower)
+            let si2 = 0;
+            while (si2 < stages.length) {
+                try {
+                    const stage = stages[si2];
+                    const hexKey = "" + stage.hex;
+                    const targetLab = this.hexToLab(stage.hex);
+                    const localCandidates = { helmet: [], chestplate: [], leggings: [], boots: [] };
+                    const keys2 = Object.keys(this.collection);
+                    let kk = 0;
+                    while (kk < keys2.length) {
+                        try {
+                            const uuid = keys2[kk];
+                            const piece = this.collection[uuid];
+                            if (piece && typeof piece === 'object' && piece.pieceName && piece.hexcode) {
+                                const detectedType = this.getPieceType(piece.pieceName);
+                                if (detectedType) {
+                                    const pieceLab = this.hexToLab(piece.hexcode);
+                                    const deltaE = Math.sqrt(
+                                        Math.pow(targetLab.L - pieceLab.L, 2) +
+                                        Math.pow(targetLab.a - pieceLab.a, 2) +
+                                        Math.pow(targetLab.b - pieceLab.b, 2)
+                                    );
+                                    if (deltaE <= 5) {
+                                        localCandidates[detectedType].push({ hex: piece.hexcode, name: piece.pieceName, uuid: uuid, deltaE: deltaE, stageHex: stage.hex, stageIndex: si2 });
+                                    }
+                                }
+                            }
+                        } catch (ie) {}
+                        kk = kk + 1;
+                    }
+                    const entry2 = this.normalColorCache[categoryName].matches[hexKey];
+                    if (entry2) entry2.candidates = localCandidates;
+                } catch (outerE) {}
+                si2 = si2 + 1;
+            }
+
+            try {
+                this.assignOptimalNormalMatches(categoryName);
+            } catch (e3) {}
+            this.isCalculating = false;
+            this.calculationProgress = 0;
+            this.calculationTotal = 0;
         }
-        
-        // Mark this stage as having candidates collected (but not assigned yet)
-        this.calculationProgress = stageIndex + 1;
-        
-        // Continue with next stage
-        const self = this;
-        setTimeout(function() {
-            self.calculateNextNormalColorStage(categoryName, stageIndex + 1);
-        }, 5);
+
     }
 
-    assignOptimalNormalColorMatches(categoryName) {
+    assignOptimalNormalMatches(categoryName) {
+        // For each stage hex in the normalColorCache for this category, pick the best candidate per piece type.
         const cache = this.normalColorCache[categoryName];
-        const pieceTypes = ["helmet", "chestplate", "leggings", "boots"];
-        
-        // For each piece type, assign optimally (each piece used only once per category)
-        let p = 0;
-        while (p < 4) {
-            const pieceType = pieceTypes[p];
-            const candidates = cache.allCandidates[pieceType];
-            
-            // Sort by deltaE (best matches first)
-            candidates.sort(function(a, b) {
-                return a.deltaE - b.deltaE;
-            });
-            
-            const usedPieces = {};
-            const assignedStages = {};
-            
-            // Assign greedily: best match first
-            let c = 0;
-            while (c < candidates.length) {
-                const candidate = candidates[c];
-                
-                // Only assign if piece hasn't been used AND stage hasn't been assigned
-                if (!usedPieces[candidate.uuid] && !assignedStages[candidate.stageHex]) {
-                    cache.matches[candidate.stageHex][pieceType] = {
-                        name: candidate.piece.pieceName,
-                        hex: candidate.piece.hexcode,
-                        deltaE: candidate.deltaE,
-                        uuid: candidate.uuid
-                    };
-                    
-                    usedPieces[candidate.uuid] = true;
-                    assignedStages[candidate.stageHex] = true;
+        if (!cache || !cache.matches) return;
+
+        const keys = Object.keys(cache.matches);
+        let ki = 0;
+        while (ki < keys.length) {
+            try {
+            const hexKey = keys[ki];
+            const entry = cache.matches[hexKey];
+            if (!entry) { ki = ki + 1; continue; }
+
+            const candidates = (entry.candidates) ? entry.candidates : { helmet: [], chestplate: [], leggings: [], boots: [] };
+
+            // For each piece type pick the single best (smallest deltaE)
+            const pieceTypes = ["helmet", "chestplate", "leggings", "boots"];
+            let p = 0;
+            while (p < pieceTypes.length) {
+                const pt = pieceTypes[p];
+                const arr = candidates[pt] || [];
+
+                if (arr.length === 0) {
+                entry[pt] = null;
+                } else {
+                // sort by deltaE ascending
+                arr.sort(function(a, b) { return a.deltaE - b.deltaE; });
+                const best = arr[0];
+                entry[pt] = {
+                    name: best.name,
+                    hex: best.hex,
+                    deltaE: best.deltaE,
+                    uuid: best.uuid
+                };
                 }
-                
-                c = c + 1;
+                p = p + 1;
             }
-            
-            p = p + 1;
+
+            // Mark calculated and remove heavy candidates list to reduce memory
+            entry.calculated = true;
+            try { delete entry.candidates; } catch (e) {}
+            } catch (e) {
+            // ignore per-entry errors
+            }
+            ki = ki + 1;
         }
-        
-        // Mark all stages as calculated
-        const stageHexes = Object.keys(cache.matches);
-        let s = 0;
-        while (s < stageHexes.length) {
-            cache.matches[stageHexes[s]].calculated = true;
-            s = s + 1;
         }
-        
-        // Clean up temporary data
-        delete cache.allCandidates;
-    }
 
     drawChecklistRow(stage, y) {
         // Target color preview box - made wider to fit hex code
