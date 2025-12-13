@@ -2757,9 +2757,10 @@ register("command", function() {
       scanningEnabled = false;
       const count = Object.keys(collection).length;
       dbGui.collectionChanged = true;
-      clearAllCaches();
       reloadCollectionFromDisk();
-      ChatLib.chat("§a[Seymour Analyzer] §7Scanning §cdisabled§7! Collection has §e" + count + " §7pieces.");
+      armorGui.recalculateAllPages();
+      clearAllCaches();
+      ChatLib.chat("§a[Seymour Analyzer] §7Scanning §cdisabled§7! Collection has §e" + count + " §7pieces. Recalculating checklist...");
       return;
     } else {
       ChatLib.chat("§a[Seymour Analyzer] §cInvalid action! Use 'start' or 'stop'.");

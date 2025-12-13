@@ -1402,8 +1402,12 @@ if (visibleStages > 19) {
     }
 
     startFadeDyeCalculation(categoryName) {
-        if (this.isCalculating) return; // Already calculating
-        
+        // Per-category guard so multiple categories can be queued.
+        if (this.fadeDyeOptimalCache[categoryName] && this.fadeDyeOptimalCache[categoryName].isCalculating) return;
+
+        if (!this.fadeDyeOptimalCache[categoryName]) this.fadeDyeOptimalCache[categoryName] = { category: categoryName, matchesByIndex: {} };
+        this.fadeDyeOptimalCache[categoryName].isCalculating = true;
+        // Mark global flag to indicate work in progress
         this.isCalculating = true;
         this.calculationProgress = 0;
         
@@ -1451,6 +1455,9 @@ if (visibleStages > 19) {
         const self = this;
 
         // Init state (some of this is already done by startFadeDyeCalculation, but keep safe)
+        if (!this.fadeDyeOptimalCache[categoryName]) this.fadeDyeOptimalCache[categoryName] = { category: categoryName, matchesByIndex: {} };
+        this.fadeDyeOptimalCache[categoryName].isCalculating = true;
+        // Ensure global flag indicates some work is running
         this.isCalculating = true;
         this.calculationProgress = 0;
         this.calculationTotal = stages.length;
@@ -1623,10 +1630,37 @@ if (visibleStages > 19) {
                         // ignore assignment errors
                     }
 
-                    // Mark completion
-                    self.isCalculating = false;
-                    self.calculationProgress = 0;
-                    self.calculationTotal = 0;
+                    // Mark completion for this category and recompute global state
+                    try {
+                        if (self.fadeDyeOptimalCache && self.fadeDyeOptimalCache[categoryName]) {
+                            self.fadeDyeOptimalCache[categoryName].isCalculating = false;
+                        }
+                        // Recompute whether any category is still calculating
+                        var stillRunning = false;
+                        try {
+                            var kf = Object.keys(self.fadeDyeOptimalCache || {});
+                            var kkf = 0;
+                            while (kkf < kf.length) {
+                                var fe = self.fadeDyeOptimalCache[kf[kkf]];
+                                if (fe && fe.isCalculating) { stillRunning = true; break; }
+                                kkf = kkf + 1;
+                            }
+                            if (!stillRunning) {
+                                var kn = Object.keys(self.normalColorCache || {});
+                                var kkn = 0;
+                                while (kkn < kn.length) {
+                                    var ne = self.normalColorCache[kn[kkn]];
+                                    if (ne && ne.isCalculating) { stillRunning = true; break; }
+                                    kkn = kkn + 1;
+                                }
+                            }
+                        } catch (ie) {}
+                        if (!stillRunning) {
+                            self.isCalculating = false;
+                            self.calculationProgress = 0;
+                            self.calculationTotal = 0;
+                        }
+                    } catch (ee) {}
 
                     // Persist caches
                     try {
@@ -1722,7 +1756,11 @@ if (visibleStages > 19) {
 
     startNormalColorCalculation(categoryName) {
         // Use a lightweight staged async worker to avoid creating heavy Java thread pools
-        if (this.isCalculating) return; // Already calculating
+        // Use a per-category guard so multiple categories can be processed concurrently
+        if (this.normalColorCache[categoryName] && this.normalColorCache[categoryName].isCalculating) return;
+        if (!this.normalColorCache[categoryName]) this.normalColorCache[categoryName] = { category: categoryName, matches: {} };
+        this.normalColorCache[categoryName].isCalculating = true;
+        // Ensure global flag indicates some work is in progress
         this.isCalculating = true;
         this.calculationProgress = 0;
 
@@ -1887,9 +1925,36 @@ if (visibleStages > 19) {
                             try { ChatLib.chat("§c[Armor Checklist] Error assigning optimal normal matches: " + e); } catch (e2) {}
                         }
 
-                        self.isCalculating = false;
-                        self.calculationProgress = 0;
-                        self.calculationTotal = 0;
+                        // Clear per-category flag and recompute global state
+                        try {
+                            if (self.normalColorCache && self.normalColorCache[categoryName]) {
+                                self.normalColorCache[categoryName].isCalculating = false;
+                            }
+                            var stillRunning = false;
+                            try {
+                                var kn = Object.keys(self.normalColorCache || {});
+                                var kkn = 0;
+                                while (kkn < kn.length) {
+                                    var ne = self.normalColorCache[kn[kkn]];
+                                    if (ne && ne.isCalculating) { stillRunning = true; break; }
+                                    kkn = kkn + 1;
+                                }
+                                if (!stillRunning) {
+                                    var kf = Object.keys(self.fadeDyeOptimalCache || {});
+                                    var kkf = 0;
+                                    while (kkf < kf.length) {
+                                        var fe = self.fadeDyeOptimalCache[kf[kkf]];
+                                        if (fe && fe.isCalculating) { stillRunning = true; break; }
+                                        kkf = kkf + 1;
+                                    }
+                                }
+                            } catch (ie) {}
+                            if (!stillRunning) {
+                                self.isCalculating = false;
+                                self.calculationProgress = 0;
+                                self.calculationTotal = 0;
+                            }
+                        } catch (ee) {}
 
                         try {
                             self.cacheStorage.matchCache = self.matchCache;
@@ -1950,9 +2015,36 @@ if (visibleStages > 19) {
             try {
                 this.assignOptimalNormalMatches(categoryName);
             } catch (e3) {}
-            this.isCalculating = false;
-            this.calculationProgress = 0;
-            this.calculationTotal = 0;
+            // Clear per-category flag and recompute global state
+            try {
+                if (this.normalColorCache && this.normalColorCache[categoryName]) {
+                    this.normalColorCache[categoryName].isCalculating = false;
+                }
+                var stillRunning = false;
+                try {
+                    var kn = Object.keys(this.normalColorCache || {});
+                    var kkn = 0;
+                    while (kkn < kn.length) {
+                        var ne = this.normalColorCache[kn[kkn]];
+                        if (ne && ne.isCalculating) { stillRunning = true; break; }
+                        kkn = kkn + 1;
+                    }
+                    if (!stillRunning) {
+                        var kf = Object.keys(this.fadeDyeOptimalCache || {});
+                        var kkf = 0;
+                        while (kkf < kf.length) {
+                            var fe = this.fadeDyeOptimalCache[kf[kkf]];
+                            if (fe && fe.isCalculating) { stillRunning = true; break; }
+                            kkf = kkf + 1;
+                        }
+                    }
+                } catch (ie) {}
+                if (!stillRunning) {
+                    this.isCalculating = false;
+                    this.calculationProgress = 0;
+                    this.calculationTotal = 0;
+                }
+            } catch (ee) {}
         }
 
     }
@@ -2004,6 +2096,50 @@ if (visibleStages > 19) {
             ki = ki + 1;
         }
         }
+
+    recalculateAllPages() {
+        // Reset caches to force full recalculation
+        this.matchCache = {};
+        this.fadeDyeOptimalCache = {};
+        this.normalColorCache = {};
+        this.currentCachedCategory = null;
+        this.collectionSize = Object.keys(this.collection || {}).length;
+
+        // Persist cleared caches immediately
+        try {
+            this.cacheStorage.matchCache = this.matchCache;
+            this.cacheStorage.fadeDyeOptimalCache = this.fadeDyeOptimalCache;
+            this.cacheStorage.normalColorCache = this.normalColorCache;
+            this.cacheStorage.collectionSize = this.collectionSize;
+            this.cacheStorage.lastUpdated = Date.now();
+            this.cacheStorage.save();
+        } catch (e) {}
+
+        const categoryNames = Object.keys(this.categories || []);
+        if (categoryNames.length === 0) return;
+
+        // Stagger starts so we don't attempt to spawn all calculations at once
+        const delayBase = 50; // ms between queued starts
+        let idx = 0;
+        while (idx < categoryNames.length) {
+            (function(cat, i, self) {
+                setTimeout(function() {
+                    try {
+                        if (self.fadeDyePageOrder.indexOf(cat) !== -1) {
+                            // Fade dye category
+                            if (!self.fadeDyeOptimalCache[cat]) self.startFadeDyeCalculation(cat);
+                        } else {
+                            // Normal category
+                            if (!self.normalColorCache[cat]) self.startNormalColorCalculation(cat);
+                        }
+                    } catch (e) {}
+                }, i * delayBase);
+            })(categoryNames[idx], idx, this);
+            idx = idx + 1;
+        }
+
+        // try { ChatLib.chat("§a[Armor Checklist] §7Queued recalculation for " + categoryNames.length + " categories."); } catch (e) {}
+    }
 
     drawChecklistRow(stage, y) {
         // Target color preview box - made wider to fit hex code
